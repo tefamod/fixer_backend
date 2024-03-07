@@ -10,7 +10,7 @@ exports.sendCarCredentials = async (car) => {
         });
 
         const mailOptions = {
-            from: 'your_email@example.com',
+            from: 'tefamod22@gmail.com',
             to: car.email,
             subject: 'Welcome to Car Service Center!',
             text: `Dear ${car.ownerName},\n\nYour car has been successfully registered with us.\n\nHere are your credentials:\nCode: ${car.generatedCode}\nPassword: ${car.generatedPassword}\n\nThank you for choosing our service.\n\nBest regards,\nThe Car Service Center Team`
