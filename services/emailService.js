@@ -31,7 +31,7 @@ exports.sendPasswordResetEmail = async (car) => {
         });
 
         const mailOptions = {
-            from: 'your_email@example.com',
+            from: 'tefamod22@gmail.com',
             to: car.email,
             subject: 'Password Reset Instructions',
             text: `Dear ${car.ownerName},\n\nYou have requested to reset your password for your car service center account.\n\nYour password is: ${car.generatedPassword}\n\nIf you did not request this, please ignore this email.\n\nBest regards,\nThe Car Service Center Team`
@@ -52,7 +52,7 @@ exports.sendRepairCompletionEmail = async (car) => {
         });
 
         const mailOptions = {
-            from: 'your_email@example.com',
+            from: 'tefamod22@gmail.com',
             to: car.email,
             subject: 'Car Repair Completion',
             text: `Dear ${car.ownerName},\n\nWe're pleased to inform you that the repair for your car has been completed.\n\nThank you for choosing our service.\n\nBest regards,\nThe Car Service Center Team`
