@@ -1,17 +1,13 @@
 const Car = require("../models/Car");
-const CarComponent = require("../models/CarComponent");
 //const slugify = require("slugify");
-const asyncHandler = require("express-async-handler");
 const apiError = require("../utils/apiError");
+const asyncHandler = require("express-async-handler");
+const factory = require("./handlersFactory");
 
 // @desc add car
 // @Route GET /api/v1/Garage
-// @access private
-exports.addCar = asyncHandler(async (req, res) => {
-  const car = await Car.create(req.body);
-
-  res.status(201).json({ data: car });
-});
+// @access private\
+exports.addCar = factory.addOne(Car);
 
 // @desc Search for a car by car number
 // @Route GET /api/v1/Garage/:carNumber
@@ -32,14 +28,15 @@ exports.searchCarByNumber = asyncHandler(async (req, res, next) => {
 // @desc Get list of all Cars
 // @Route GET /api/v1/Garage
 // @access public
-exports.getCars = asyncHandler(async (req, res) => {
-  const page = req.query.page * 1 || 1;
-  const limit = req.query.limit * 1 || 5;
-  const skip = (page - 1) * limit;
+exports.getCars = factory.getAll(Car);
+//exports.getCars = asyncHandler(async (req, res) => {
+//  const page = req.query.page * 1 || 1;
+//  const limit = req.query.limit * 1 || 5;
+//  const skip = (page - 1) * limit;
 
-  const cars = await Car.find({}).skip(skip).limit(limit);
-  res.status(200).json({ result: cars.length, page, data: cars });
-});
+// const cars = await Car.find({}).skip(skip).limit(limit);
+//  res.status(200).json({ result: cars.length, page, data: cars });
+//});
 
 // @desc Get list of repairing Cars
 // @Route GET /api/v1/Garage/repairing
@@ -85,14 +82,4 @@ exports.makeCarInRepair = asyncHandler(async (req, res, next) => {
 // @desc upadete spacific car
 // @Route PUT /api/v1/Garage/:id
 // @access private
-
-exports.updateCar = asyncHandler(async (req, res, next) => {
-  const { id } = req.params;
-  const car = await Car.findByIdAndUpdate({ _id: id }, req.body, {
-    new: true,
-  });
-  if (!car) {
-    return next(new apiError(`Can't find car for this id ${id}`, 404));
-  }
-  res.status(201).json({ data: car });
-});
+exports.updateCar = factory.updateOne(Car);

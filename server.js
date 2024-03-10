@@ -7,8 +7,10 @@ const apiError = require("./utils/apiError");
 const dbconnection = require("./config/database");
 //const categoryRoute = require("./routes/categoryRoutes");
 //const SubCategoryRoute = require("./routes/subCategoryRoutes");
-const Garage = require("./routes/GarageRoute");
+const GarageRoute = require("./routes/GarageRoute");
 const InvRoute = require("./routes/inventoryRoute");
+const userRoute = require("./routes/userRoute");
+const authRoute = require("./routes/authRoute");
 const globalError = require("./middlewares/errorMiddleWare");
 
 //db connection
@@ -25,7 +27,9 @@ if (process.env.NODE_ENV == "development") {
 
 // Routes
 app.use("/api/V1/Inventort", InvRoute);
-app.use("/api/V1/Garage", Garage);
+app.use("/api/V1/Garage", GarageRoute);
+app.use("/api/V1/User", userRoute);
+app.use("/api/V1/auth", authRoute);
 //app.use("/api/V1/Brands", BrandRoute);
 //app.use("/api/V1/Products", productRoute);
 app.all("*", (req, res, next) => {
