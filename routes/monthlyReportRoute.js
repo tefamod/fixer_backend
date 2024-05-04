@@ -4,13 +4,13 @@ const router = express.Router();
 const {
   createReport,
   getAllReports,
-  getThreePramsForSpecMon,
+  put_the_bills_rent,
   addorSubthing,
   getmonthWork,
 } = require("../services/moneyReportServices");
 
 router.route("/").get(getAllReports).post(createReport);
-router.route("/specific_month_year/:year_month").get(getThreePramsForSpecMon);
+router.route("/put_bills_rent/:year_month").put(put_the_bills_rent);
 router.route("/addthing/").post(addorSubthing);
 router.route("/home/work/:year_month").get(getmonthWork);
 module.exports = router;

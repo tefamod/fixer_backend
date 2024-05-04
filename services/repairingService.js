@@ -397,6 +397,8 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
       }
 
       // No need to manually trigger save here, findOneAndUpdate already saves the document
+    } else {
+      repairingDoc.complete = false;
     }
 
     repairingDoc.completedServicesRatio =
@@ -418,7 +420,9 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
     );
 
     if (!car_state) {
-      return next(new apiError(`No car for this number ${carNumber}`, 404));
+      return next(
+        new apiError(`No car for this number ${repairingDoc.carNumber}`, 404)
+      );
     }
     await car_state.save();
     const car_ratio = await Car.findOneAndUpdate(
@@ -428,10 +432,13 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
     );
 
     if (!car_ratio) {
-      return next(new apiError(`No car for this number ${carNumber}`, 404));
+      return next(
+        new apiError(`No car for this number ${repairingDoc.carNumber}`, 404)
+      );
     }
+    await service.save();
     await car_ratio.save();
-    // Save the changes
+
     await repairingDoc.save();
 
     res

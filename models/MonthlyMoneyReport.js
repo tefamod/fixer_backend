@@ -22,7 +22,12 @@ const monthlyMoneyReportSchema = new mongoose.Schema(
         },
       },
     ],
+    electricity_bill: { type: Number },
+    water_bill: { type: Number },
+    gas_bill: { type: Number },
+    rent: { type: Number },
   },
+
   {
     timestamps: true,
   }
