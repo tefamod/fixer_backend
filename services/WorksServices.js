@@ -105,7 +105,7 @@ exports.UpdateWorkerDetalsByNID = asyncHandler(async (req, res, next) => {
 
 exports.moneyFromToworker = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
-  const { date, loans, penalty, reward, newMonthe } = req.body;
+  const { date, loans, penalty, reward, newMonth } = req.body;
   let total = 0;
   if (loans > 0 || penalty > 0 || reward < 0) {
     return next(
@@ -123,7 +123,7 @@ exports.moneyFromToworker = asyncHandler(async (req, res, next) => {
     );
   }
 
-  if (newMonthe) {
+  if (newMonth) {
     worker.salaryAfterProcces = worker.salary;
   }
 
@@ -149,5 +149,5 @@ exports.moneyFromToworker = asyncHandler(async (req, res, next) => {
   await worker.save();
 
   // Send response with updated worker data
-  res.status(201).json({ data: worker });
+  res.status(200).json({ data: worker });
 });
