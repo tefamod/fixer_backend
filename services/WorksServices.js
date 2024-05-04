@@ -3,11 +3,23 @@ const Worker = require("../models/Worker");
 const asyncHandler = require("express-async-handler");
 const factory = require("./handlersFactory");
 const apiError = require("../utils/apiError");
-
+const moment = require("moment");
 // @desc add Worker
 // @Route post /api/v1/Worker
 // @access private
-exports.addWorker = factory.addOne(Worker);
+exports.addWorker = asyncHandler(async (req, res) => {
+  const { name, phoneNumber, jobTitle, salary, IdNumber } = req.body;
+
+  const newDoc = await Worker.create({
+    name,
+    phoneNumber,
+    jobTitle,
+    salary,
+    IdNumber,
+    salaryAfterProcces: salary,
+  });
+  res.status(201).json({ data: newDoc });
+});
 
 // @desc Get list of Worker
 // @Route GET /api/v1/Worker
@@ -90,37 +102,52 @@ exports.UpdateWorkerDetalsByNID = asyncHandler(async (req, res, next) => {
 // @desc set reword or loans or penalty for worker
 // @Route Post /api/v1/Worker/:id
 // @access private
+
 exports.moneyFromToworker = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
-  const { loans, penalty, reward } = req.body;
-  let cal_salary = 0;
-
-  // Assuming carNumber is a unique identifier in your Car model
+  const { date, loans, penalty, reward, newMonthe } = req.body;
+  let total = 0;
+  if (loans > 0 || penalty > 0 || reward < 0) {
+    return next(
+      new apiError(
+        `the loans and penalty must be negative and reward must be positive`,
+        400
+      )
+    );
+  }
   const worker = await Worker.findById(id);
 
   if (!worker) {
     return next(
-      new apiError(`Can't find worker with this national id  ${id}`, 404)
+      new apiError(`Can't find worker with this national id ${id}`, 404)
     );
-  }
-  cal_salary = worker.salary;
-  if (loans > 0 || penalty > 0 || reward < 0) {
-    return next(
-      new apiError(
-        `loans and penalty must be negative and the reword must be positive`,
-        400
-      )
-    );
-  } else {
-    cal_salary = cal_salary + loans + penalty + reward;
   }
 
-  if (cal_salary > 0) {
-    worker.salary = cal_salary;
-    worker.loans = worker.loans + loans;
-    worker.penalty = worker.penalty + penalty;
-    worker.reward = worker.reward + reward;
-    worker.save();
+  if (newMonthe) {
+    worker.salaryAfterProcces = worker.salary;
   }
+
+  // Deduct loans from salary if applicable
+  if (loans < 0) {
+    worker.loans.push({ date, amount: loans });
+    total = total + loans;
+  }
+
+  // Deduct penalties from salary if applicable
+  if (penalty < 0) {
+    worker.penalty.push({ date, amount: penalty });
+    total = total + penalty;
+  }
+
+  // Add rewards to salary if applicable
+  if (reward > 0) {
+    worker.reward.push({ date, amount: reward });
+    total = total + reward;
+  }
+  worker.salaryAfterProcces = worker.salaryAfterProcces + total;
+  // Save the updated worker document
+  await worker.save();
+
+  // Send response with updated worker data
   res.status(201).json({ data: worker });
 });

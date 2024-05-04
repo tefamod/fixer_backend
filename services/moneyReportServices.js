@@ -92,25 +92,27 @@ exports.createReport = asyncHandler(async (req, res, next) => {
 // @access private
 exports.getAllReports = factory.getAll(MonthlyMoneyReport);
 
-// @desc get specific a monthly Report by month
-// @Route get /api/v1/monthlyReport:monthName
+// @desc put the bills and rent
+// @Route put /api/v1/monthlyReport:yrea_month
 // @access private
 
-exports.getThreePramsForSpecMon = asyncHandler(async (req, res, next) => {
+exports.put_the_bills_rent = asyncHandler(async (req, res, next) => {
   let { year_month } = req.params;
+  const { electricity_bill, water_bill, gas_bill, rent } = req.body;
+  let total_bills = 0;
 
-  // Splitting month_year into month and year
+  if (electricity_bill < 0 || water_bill < 0 || gas_bill < 0 || rent < 0) {
+    return next(new apiError(`the values must be positive`, 400));
+  }
+
   let [year, month] = year_month.split("_").map(Number);
   month = parseInt(month);
   year = parseInt(year);
   // Validate month and year
   if (isNaN(month) || isNaN(year)) {
-    return res
-      .status(400)
-      .json({ success: false, error: "Invalid month or year" });
+    return next(new apiError("Invalid month and year", 400));
   }
-
-  const monthReport = await MonthlyMoneyReport.findOne({
+  const report = await MonthlyMoneyReport.findOne({
     $expr: {
       $and: [
         { $eq: [{ $year: "$date" }, year] },
@@ -118,15 +120,36 @@ exports.getThreePramsForSpecMon = asyncHandler(async (req, res, next) => {
       ],
     },
   });
+  const monthReport = await MonthlyMoneyReport.findOneAndUpdate(
+    {
+      $expr: {
+        $and: [
+          { $eq: [{ $year: "$date" }, year] },
+          { $eq: [{ $month: "$date" }, month] },
+        ],
+      },
+    },
+    {
+      electricity_bill,
+      water_bill,
+      gas_bill,
+      rent,
+    },
+    { new: true }
+  );
 
   if (!monthReport) {
     return next(
       new apiError(
         `There No report for this month ${month} and this year ${year}`,
-        400
+        404
       )
     );
   }
+  total_bills = electricity_bill + water_bill + gas_bill + rent;
+  report.outCome = report.outCome + total_bills;
+  report.totalGain = report.totalGain - total_bills;
+  report.save();
   delete monthReport._doc.additions;
   delete monthReport._doc.date;
   res.status(201).json({ data: monthReport });

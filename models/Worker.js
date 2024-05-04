@@ -10,6 +10,7 @@ const workerSchema = new mongoose.Schema(
     },
     jobTitle: { type: String, required: [true, "the jobTitle is required "] },
     salary: { type: Number, required: [true, "the salary is required "] },
+    salaryAfterProcces: { type: Number },
     IdNumber: {
       type: String,
       required: [true, "the IdNumber is required "],
@@ -21,9 +22,24 @@ const workerSchema = new mongoose.Schema(
         message: "The IdNumber must be exactly 14 digits long",
       },
     },
-    loans: { type: Number, default: 0 },
-    penalty: { type: Number, default: 0 },
-    reward: { type: Number, default: 0 },
+    loans: [
+      {
+        amount: { type: Number, default: 0 },
+        date: { type: Date },
+      },
+    ],
+    penalty: [
+      {
+        amount: { type: Number, default: 0 },
+        date: { type: Date },
+      },
+    ],
+    reward: [
+      {
+        amount: { type: Number, default: 0 },
+        date: { type: Date },
+      },
+    ],
   },
   { timestamps: true }
 );
