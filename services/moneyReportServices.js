@@ -52,7 +52,7 @@ exports.createReport = asyncHandler(async (req, res, next) => {
       {
         $group: {
           _id: null,
-          totalSalaries: { $sum: "$salary" },
+          totalSalaries: { $sum: "$salaryAfterReword" }, // Summing the salaryAfterReword field
         },
       },
     ]);

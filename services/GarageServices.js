@@ -41,63 +41,84 @@ exports.addCar = asyncHandler(async (req, res, next) => {
     nonPeriodicRepairs,
     distances,
     motorNumber,
+    codeForCarCode,
   } = req.body;
 
-  const existingCar = await Car.findOne({ carNumber });
-  if (existingCar) {
-    return next(
-      new apiError(
-        `There is already a car with the same car number ${carNumber}`,
-        400
-      )
-    );
-  }
+  try {
+    const existingCar = await Car.findOne({ carNumber });
+    if (existingCar) {
+      return next(
+        new apiError(
+          `There is already a car with the same car number ${carNumber}`,
+          400
+        )
+      );
+    }
 
-  const generatedCode = await generateUniqueCode();
-  const user = await User.findById(id);
-  if (!user) {
-    return next(
-      new apiError(
-        "there is no user for this car , you must add user first",
-        404
-      )
-    );
-  }
-  const newCar = await Car.create({
-    ownerName: user.name,
-    carNumber,
-    chassisNumber,
-    color,
-    brand,
-    category,
-    model,
-    nextRepairDate,
-    lastRepairDate,
-    periodicRepairs,
-    nonPeriodicRepairs,
-    componentState: req.body.componentState,
-    distances,
-    motorNumber,
-    generatedCode: generatedCode,
-  });
+    // Find the latest car code with the same prefix
+    const regex = new RegExp("^" + codeForCarCode + "\\d+$", "i");
+    const latestCar = await Car.findOne({ generatedCode: regex })
+      .sort({ generatedCode: -1 })
+      .limit(1);
 
-  if (!newCar) {
-    return next(new apiError(`Can't create car in database`, 500));
-  }
+    let newCarCode;
+    if (latestCar) {
+      const lastNumber = parseInt(
+        latestCar.generatedCode.replace(codeForCarCode, "")
+      );
 
-  if (user) {
+      const nextNumber = lastNumber + 1;
+      newCarCode = codeForCarCode + nextNumber;
+    } else {
+      newCarCode = codeForCarCode + "1";
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return next(
+        new apiError(
+          "There is no user for this car, you must add user first",
+          404
+        )
+      );
+    }
+
+    const newCar = await Car.create({
+      ownerName: user.name,
+      carNumber,
+      chassisNumber,
+      color,
+      brand,
+      category,
+      model,
+      nextRepairDate,
+      lastRepairDate,
+      periodicRepairs,
+      nonPeriodicRepairs,
+      componentState: req.body.componentState,
+      distances,
+      motorNumber,
+      generatedCode: newCarCode,
+    });
+
+    if (!newCar) {
+      return next(new apiError(`Can't create car in database`, 500));
+    }
+
     user.car.push({
       id: newCar._id,
-      carCode: generatedCode,
+      carCode: newCarCode,
       carNumber,
       brand,
       category,
       model,
     });
     await user.save();
-  }
 
-  res.status(201).json({ data: { newCar, user } });
+    res.status(201).json({ data: { newCar, user } });
+  } catch (error) {
+    next(new apiError(`Error adding car`, 500));
+  }
 });
 
 // @desc Search for a car by car number

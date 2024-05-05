@@ -17,6 +17,7 @@ exports.addWorker = asyncHandler(async (req, res) => {
     salary,
     IdNumber,
     salaryAfterProcces: salary,
+    salaryAfterReword: salary,
   });
   res.status(201).json({ data: newDoc });
 });
@@ -105,8 +106,10 @@ exports.UpdateWorkerDetalsByNID = asyncHandler(async (req, res, next) => {
 
 exports.moneyFromToworker = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
-  const { date, loans, penalty, reward, newMonth } = req.body;
+  const { date, loans, penalty, reward } = req.body;
   let total = 0;
+  let greaterSavedMonth = 0;
+  let greaterSavedYear = 0;
   if (loans > 0 || penalty > 0 || reward < 0) {
     return next(
       new apiError(
@@ -123,31 +126,63 @@ exports.moneyFromToworker = asyncHandler(async (req, res, next) => {
     );
   }
 
-  if (newMonth) {
-    worker.salaryAfterProcces = worker.salary;
-  }
+  const currentDate = new Date(date);
+  const currentMonth = currentDate.getMonth() + 1;
+  const currentYear = currentDate.getFullYear();
 
-  // Deduct loans from salary if applicable
+  // Checking if current date's month is greater than any of the dates' months
+  worker.loans.forEach((loan) => {
+    const loanMonth = new Date(loan.date).getMonth() + 1;
+    const loanYear = new Date(loan.date).getFullYear();
+    if (loanMonth > greaterSavedMonth) {
+      greaterSavedMonth = loanMonth;
+    }
+    if (loanYear > greaterSavedYear) {
+      greaterSavedYear = loanYear;
+    }
+  });
+  worker.penalty.forEach((pen) => {
+    const penMonth = new Date(pen.date).getMonth() + 1;
+    const penYear = new Date(pen.date).getFullYear();
+    if (penMonth > greaterSavedMonth) {
+      greaterSavedMonth = penMonth;
+    }
+    if (penYear > greaterSavedYear) {
+      greaterSavedYear = penYear;
+    }
+  });
+  worker.reward.forEach((re) => {
+    const reMonth = new Date(re.date).getMonth() + 1;
+    const reYear = new Date(re.date).getFullYear();
+    if (reMonth > greaterSavedMonth) {
+      greaterSavedMonth = reMonth;
+    }
+    if (reYear > greaterSavedYear) {
+      greaterSavedYear = reYear;
+    }
+  });
+  if (currentMonth > greaterSavedMonth || currentYear > greaterSavedYear) {
+    worker.salaryAfterProcces = worker.salary;
+    worker.salaryAfterReword = worker.salary;
+  }
   if (loans < 0) {
     worker.loans.push({ date, amount: loans });
     total = total + loans;
   }
 
-  // Deduct penalties from salary if applicable
   if (penalty < 0) {
     worker.penalty.push({ date, amount: penalty });
-    total = total + penalty;
+    total = total + loans;
   }
 
-  // Add rewards to salary if applicable
   if (reward > 0) {
     worker.reward.push({ date, amount: reward });
     total = total + reward;
+    worker.salaryAfterReword = worker.salaryAfterReword + reward;
   }
   worker.salaryAfterProcces = worker.salaryAfterProcces + total;
-  // Save the updated worker document
+
   await worker.save();
 
-  // Send response with updated worker data
   res.status(200).json({ data: worker });
 });
