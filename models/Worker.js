@@ -11,6 +11,7 @@ const workerSchema = new mongoose.Schema(
     jobTitle: { type: String, required: [true, "the jobTitle is required "] },
     salary: { type: Number, required: [true, "the salary is required "] },
     salaryAfterProcces: { type: Number },
+    salaryAfterReword: { type: Number },
     IdNumber: {
       type: String,
       required: [true, "the IdNumber is required "],
