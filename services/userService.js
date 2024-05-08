@@ -12,7 +12,7 @@ const User = require("../models/userModel");
 const Car = require("../models/Car");
 const ApiFeatures = require("../utils/apiFeatures");
 const sendEmail = require("../utils/sendEmail");
-
+const CategoryCode = require("../models/categoryCode");
 // Upload single image
 exports.uploadUserImage = uploadSingleImage("profileImg");
 
@@ -117,12 +117,12 @@ exports.getUser = factory.getOne(User);
 // @route   POST  /api/v1/users
 // @access  Private/Admin
 exports.createUser = asyncHandler(async (req, res, next) => {
-  const generatedCode = await generateUniqueCode();
-  const generatedPassword = crypto.randomBytes(6).toString("hex").toUpperCase();
+  const generatedPassword = await generateUniqueCode();
+  //const generatedPassword = crypto.randomBytes(6).toString("hex").toUpperCase();
   //console.log("generated code", generatedCode);
   //console.log("generated Password", generatedPassword);
   // 1- Create user
-  const { email, carNumber } = req.body;
+  const { email, carNumber, brand } = req.body;
   const fuser = await Car.findOne({ email });
   if (fuser) {
     return next(new ApiError(`this email is already used ${fuser}`, 400));
@@ -136,6 +136,29 @@ exports.createUser = asyncHandler(async (req, res, next) => {
       )
     );
   }
+  const categoryCode = await CategoryCode.findOne({ category: brand });
+  if (!categoryCode) {
+    return next(
+      new ApiError(`there is no category with this name ${brand}`, 400)
+    );
+  }
+  const regex = new RegExp("^" + categoryCode.code + "\\d+$", "i");
+  const latestCar = await Car.findOne({ generatedCode: regex })
+    .sort({ generatedCode: -1 })
+    .limit(1);
+
+  let newCarCode;
+  if (latestCar) {
+    const lastNumber = parseInt(
+      latestCar.generatedCode.replace(categoryCode.code, "")
+    );
+
+    const nextNumber = lastNumber + 1;
+    newCarCode = categoryCode.code + nextNumber;
+  } else {
+    newCarCode = categoryCode.code + "1";
+  }
+
   const newCar = await Car.create({
     ownerName: req.body.name,
     carNumber: req.body.carNumber,
@@ -146,8 +169,7 @@ exports.createUser = asyncHandler(async (req, res, next) => {
     brand: req.body.brand,
     category: req.body.category,
     model: req.body.model,
-    generatedCode: generatedCode,
-    generatedPassword: generatedPassword,
+    generatedCode: newCarCode,
     distances: req.body.distances,
     motorNumber: req.body.motorNumber,
   });
@@ -160,7 +182,7 @@ exports.createUser = asyncHandler(async (req, res, next) => {
     car: [
       {
         id: newCar._id,
-        carCode: generatedCode,
+        carCode: newCarCode,
         carNumber: req.body.carNumber,
         brand: req.body.brand,
         category: req.body.category,
@@ -178,7 +200,7 @@ exports.createUser = asyncHandler(async (req, res, next) => {
     return next(new ApiError("There is an error", 500));
   }
   // 3) Send the reset code via email
-  const message = `Dear ${req.body.name},\n\nYour car has been successfully registered with us.\n\nHere are your credentials:\ncar Code: ${generatedCode}\nPassword: ${generatedPassword}\n\nThank you for choosing our service.\n\nBest regards,\nThe Car Service Center Team`;
+  const message = `Dear ${req.body.name},\n\nYour car has been successfully registered with us.\n\nHere are your credentials:\ncar Code: ${newCarCode}\nPassword: ${generatedPassword}\n\nThank you for choosing our service.\n\nBest regards,\nThe Car Service Center Team`;
   try {
     await sendEmail({
       email: req.body.email,
@@ -251,7 +273,7 @@ exports.createUser = asyncHandler(async (req, res, next) => {
         <p>Dear ${req.body.name},</p>
         <p>Your car has been successfully registered with us.</p>
         <div class="credentials">
-            <p><strong>Car Code:</strong> ${generatedCode}</p>
+            <p><strong>Car Code:</strong> ${newCarCode}</p>
             <p><strong>Password:</strong> ${generatedPassword}</p>
         </div>
         <p>Thank you for choosing our service.</p>
