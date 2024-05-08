@@ -6,23 +6,8 @@ const apiError = require("../utils/apiError");
 const asyncHandler = require("express-async-handler");
 const factory = require("./handlersFactory");
 const ApiFeatures = require("../utils/apiFeatures");
+const CategoryCode = require("../models/categoryCode");
 
-const generateUniqueCode = async () => {
-  let isUnique = false;
-  let code;
-
-  // Generate and check until a unique 8-digit code is found
-  while (!isUnique) {
-    code = Math.floor(10000000 + Math.random() * 90000000).toString();
-    const existingCar = await Car.findOne({ generatedCode: code });
-
-    if (!existingCar) {
-      isUnique = true;
-    }
-  }
-
-  return code;
-};
 // @desc add car
 // @Route GET /api/v1/Garage
 // @access private
@@ -41,7 +26,6 @@ exports.addCar = asyncHandler(async (req, res, next) => {
     nonPeriodicRepairs,
     distances,
     motorNumber,
-    codeForCarCode,
   } = req.body;
 
   try {
@@ -54,9 +38,13 @@ exports.addCar = asyncHandler(async (req, res, next) => {
         )
       );
     }
-
-    // Find the latest car code with the same prefix
-    const regex = new RegExp("^" + codeForCarCode + "\\d+$", "i");
+    const categoryCode = await CategoryCode.findOne({ category: brand });
+    if (!categoryCode) {
+      return next(
+        new apiError(`there is no brand with this name ${brand}`, 400)
+      );
+    }
+    const regex = new RegExp("^" + categoryCode.code + "\\d+$", "i");
     const latestCar = await Car.findOne({ generatedCode: regex })
       .sort({ generatedCode: -1 })
       .limit(1);
@@ -64,13 +52,13 @@ exports.addCar = asyncHandler(async (req, res, next) => {
     let newCarCode;
     if (latestCar) {
       const lastNumber = parseInt(
-        latestCar.generatedCode.replace(codeForCarCode, "")
+        latestCar.generatedCode.replace(categoryCode.code, "")
       );
 
       const nextNumber = lastNumber + 1;
-      newCarCode = codeForCarCode + nextNumber;
+      newCarCode = categoryCode.code + nextNumber;
     } else {
-      newCarCode = codeForCarCode + "1";
+      newCarCode = categoryCode.code + "1";
     }
 
     const user = await User.findById(id);
@@ -117,6 +105,8 @@ exports.addCar = asyncHandler(async (req, res, next) => {
 
     res.status(201).json({ data: { newCar, user } });
   } catch (error) {
+    console.log(error);
+    res.status(400).json({ error: error });
     next(new apiError(`Error adding car`, 500));
   }
 });

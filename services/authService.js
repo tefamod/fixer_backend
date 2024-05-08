@@ -366,12 +366,12 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
                   }
                   
                   .footer {
-                    background-color: #f0f2f5;
-                    text-align: center;
-                    padding: 10px;
-                    border-top: 1px solid #ddd;
-                    border-radius: 0 0 8px 8px;
-                }
+                      background-color: #f0f2f5;
+                      text-align: center;
+                      padding: 10px;
+                      border-top: 1px solid #ddd;
+                      border-radius: 0 0 8px 8px;
+                  }
               </style>
           </head>
           <body>
@@ -379,14 +379,13 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
                   <img src="https://raw.githubusercontent.com/joeshwoa/fixer_system/main/assets/images/51.png" alt="Logo" style="display: block; margin: 0 auto; max-width: 200px; margin-bottom: 20px;">
                   <h1>Car Fixing Center</h1>
                   <p>Click the button below to login. Note: This link will expire in 1 hour.</p>
-                  <button class="login-button"><a href="${link}" style="color: white; text-decoration: none;">Login</a></button>
+                  <a href="${link}" class="login-button">Login</a>
               </div>
               <div class="footer">
                   &copy; 2024 Car Fixing Center. All rights reserved.
               </div>
           </body>
-          </html>
-          `,
+          </html>`,
         });
       } catch (err) {
         return next(new ApiError("There was an error in sending email", 500));
