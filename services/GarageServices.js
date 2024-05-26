@@ -26,6 +26,7 @@ exports.addCar = asyncHandler(async (req, res, next) => {
     nonPeriodicRepairs,
     distances,
     motorNumber,
+    clientType,
   } = req.body;
 
   try {
@@ -38,10 +39,35 @@ exports.addCar = asyncHandler(async (req, res, next) => {
         )
       );
     }
-    const categoryCode = await CategoryCode.findOne({ category: brand });
+    // Check for an existing car with the same chassis number if provided
+    if (chassisNumber) {
+      const existingCarWithChassis = await Car.findOne({ chassisNumber });
+      if (existingCarWithChassis) {
+        return next(
+          new apiError(
+            `There is already a car with the same chassis number ${chassisNumber}`,
+            400
+          )
+        );
+      }
+    }
+
+    // Check for an existing car with the same motor number if provided
+    if (motorNumber) {
+      const existingCarWithMotor = await Car.findOne({ motorNumber });
+      if (existingCarWithMotor) {
+        return next(
+          new apiError(
+            `There is already a car with the same motor number ${motorNumber}`,
+            400
+          )
+        );
+      }
+    }
+    const categoryCode = await CategoryCode.findOne({ category: clientType });
     if (!categoryCode) {
       return next(
-        new apiError(`there is no brand with this name ${brand}`, 400)
+        new apiError(`there is no type with this name ${clientType}`, 400)
       );
     }
     const regex = new RegExp("^" + categoryCode.code + "\\d+$", "i");
@@ -74,7 +100,7 @@ exports.addCar = asyncHandler(async (req, res, next) => {
     const newCar = await Car.create({
       ownerName: user.name,
       carNumber,
-      chassisNumber,
+      chassisNumber: req.body.chassisNumber,
       color,
       brand,
       category,

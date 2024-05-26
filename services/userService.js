@@ -122,7 +122,7 @@ exports.createUser = asyncHandler(async (req, res, next) => {
   //console.log("generated code", generatedCode);
   //console.log("generated Password", generatedPassword);
   // 1- Create user
-  const { email, carNumber, brand } = req.body;
+  const { email, carNumber, brand, clientType } = req.body;
   const fuser = await Car.findOne({ email });
   if (fuser) {
     return next(new ApiError(`this email is already used ${fuser}`, 400));
@@ -136,10 +136,10 @@ exports.createUser = asyncHandler(async (req, res, next) => {
       )
     );
   }
-  const categoryCode = await CategoryCode.findOne({ category: brand });
+  const categoryCode = await CategoryCode.findOne({ category: clientType });
   if (!categoryCode) {
     return next(
-      new ApiError(`there is no category with this name ${brand}`, 400)
+      new ApiError(`there is no type with this name ${clientType}`, 400)
     );
   }
   const regex = new RegExp("^" + categoryCode.code + "\\d+$", "i");
@@ -162,8 +162,6 @@ exports.createUser = asyncHandler(async (req, res, next) => {
   const newCar = await Car.create({
     ownerName: req.body.name,
     carNumber: req.body.carNumber,
-    phoneNumber: req.body.phoneNumber,
-    email: req.body.email,
     chassisNumber: req.body.chassisNumber,
     color: req.body.color,
     brand: req.body.brand,
