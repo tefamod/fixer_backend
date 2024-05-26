@@ -7,6 +7,7 @@ const carSchema = new mongoose.Schema({
   },
   carNumber: {
     type: String,
+    required: [true, "Car Number is required"],
   },
   chassisNumber: {
     type: String,
