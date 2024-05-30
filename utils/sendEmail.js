@@ -6,14 +6,14 @@ const sendEmail = async (options) => {
   var transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: "sweatcoin.acc.num1@gmail.com",
-      pass: "jmye qvry bqaw ppfs",
+      user: "fixer.car.service.center@gmail.com",
+      pass: "ydky egoa tltu wpmv",
     },
   });
 
   // 2) Define email options (like from, to, subject, email content)
   var mailOptions = {
-    from: "sweatcoin.acc.num1@gmail.com",
+    from: "fixer.car.service.center@gmail.com",
     to: options.email,
     subject: options.subject,
     text: options.message,
