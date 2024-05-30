@@ -580,7 +580,7 @@ exports.getRepairsReport = asyncHandler(async (req, res, next) => {
     return next(new apiError(`Can't find car with this id ${id}`, 404));
   }
 
-  const carInfo = await Car.find({ carNumber: { $in: Repair.carNumber } });
+  const carInfo = await Car.findOne({ carNumber: { $in: Repair.carNumber } });
 
   if (!carInfo) {
     return next(
@@ -595,18 +595,20 @@ exports.getRepairsReport = asyncHandler(async (req, res, next) => {
       new apiError(`Can't car for this user ${carInfo.ownerName}`, 404)
     );
   }
+
+  const info = {
+    name: carInfo.ownerName,
+    phone: userInfo.phoneNumber,
+    carNumber: carInfo.carNumber,
+    chassisNumber: carInfo.chassisNumber,
+    category: carInfo.category,
+    color: carInfo.color,
+    distances: carInfo.distances,
+    model: carInfo.model,
+    clientCode: carInfo.generatedCode,
+  };
   res.status(200).json({
     repair: Repair,
-    data: {
-      name: carInfo.ownerName,
-      phone: userInfo.phoneNumber,
-      carNumber: carInfo.carNumber,
-      chassisNumber: carInfo.chassisNumber,
-      category: carInfo.category,
-      color: carInfo.color,
-      distances: carInfo.distances,
-      model: carInfo.model,
-      clientCode: carInfo.generatedCode,
-    },
+    data: info,
   });
 });
