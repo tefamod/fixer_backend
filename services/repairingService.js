@@ -1,6 +1,7 @@
 const Inventory = require("../models/Inventory");
 const Repairing = require("../models/repairingModel");
 const Car = require("../models/Car");
+const User = require("../models/userModel");
 //const slugify = require("slugify");
 const apiError = require("../utils/apiError");
 const ApiFeatures = require("../utils/apiFeatures");
@@ -565,4 +566,47 @@ exports.getCarRepairsByGenCode = asyncHandler(async (req, res, next) => {
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
   res.status(200).json({ data: repairing });
+});
+
+// @desc get the detiles for repair report
+// @Route GET /api/v1/repairing/report/:id
+// @access private
+exports.getRepairsReport = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  const Repair = await Repairing.findById(id);
+
+  if (!Repair) {
+    return next(new apiError(`Can't find car with this id ${id}`, 404));
+  }
+
+  const carInfo = await Car.find({ carNumber: { $in: Repair.carNumber } });
+
+  if (!carInfo) {
+    return next(
+      new apiError(`Can't find services for this car ${carInfo.carNumber}`, 404)
+    );
+  }
+
+  const userInfo = await User.find({ name: { $in: carInfo.ownerName } });
+
+  if (!userInfo) {
+    return next(
+      new apiError(`Can't car for this user ${carInfo.ownerName}`, 404)
+    );
+  }
+  res.status(200).json({
+    repair: Repair,
+    data: {
+      name: carInfo.ownerName,
+      phone: userInfo.phoneNumber,
+      carNumber: carInfo.carNumber,
+      chassisNumber: carInfo.chassisNumber,
+      category: carInfo.category,
+      color: carInfo.color,
+      distances: carInfo.distances,
+      model: carInfo.model,
+      clientCode: carInfo.generatedCode,
+    },
+  });
 });
