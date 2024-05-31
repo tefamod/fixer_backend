@@ -492,6 +492,7 @@ exports.getAllComRepairs = asyncHandler(async (req, res, next) => {
         priceAfterDiscount: repair.priceAfterDiscount,
         carCode: carCode,
         paidOn: repair.createdAt,
+        id: repair._id,
       };
     } else {
       return next(
@@ -588,7 +589,7 @@ exports.getRepairsReport = asyncHandler(async (req, res, next) => {
     );
   }
 
-  const userInfo = await User.find({ name: { $in: carInfo.ownerName } });
+  const userInfo = await User.findOne({ name: { $in: carInfo.ownerName } });
 
   if (!userInfo) {
     return next(
@@ -601,7 +602,7 @@ exports.getRepairsReport = asyncHandler(async (req, res, next) => {
     phone: userInfo.phoneNumber,
     carNumber: carInfo.carNumber,
     chassisNumber: carInfo.chassisNumber,
-    category: carInfo.category,
+    brand: carInfo.brand,
     color: carInfo.color,
     distances: carInfo.distances,
     model: carInfo.model,
