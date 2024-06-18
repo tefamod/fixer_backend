@@ -12,10 +12,12 @@ const {
   getallCategoryCode,
   updateCategory,
   searchInCategory,
+  getallCategoryOnly,
 } = require("../services/categoryCodeService");
 
 router.route("/").post(createCategoryCode).get(getallCategoryCode);
 router.route("/:id").get(getCategoryCode).put(updateCategory);
 router.route("/search/:searchString").get(searchInCategory);
+router.route("/category/fordrop/").get(getallCategoryOnly);
 
 module.exports = router;
