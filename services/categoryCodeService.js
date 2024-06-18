@@ -97,3 +97,15 @@ exports.searchInCategory = asyncHandler(async (req, res, next) => {
   );
   res.status(200).json({ data: sortedCategory });
 });
+
+// @doc get all categories
+// @Route put /api/v1/Category/getall/
+// @access private
+exports.getallCategoryOnly = asyncHandler(async (req, res, next) => {
+  const categories = await CategoryCode.find({}, "category");
+
+  // Extract the categories from the documents
+  const categoryList = categories.map((doc) => doc.category);
+
+  res.status(200).json({ data: categoryList });
+});
