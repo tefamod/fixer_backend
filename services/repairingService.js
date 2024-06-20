@@ -104,8 +104,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     }
     reCar.periodicRepairs = periodicRepairs;
     reCar.nonPeriodicRepairs = nonperiodicRepairs;
-    console.log(reCar.periodicRepairs);
-    console.log(reCar.nonPeriodicRepairs);
+
     reCar.save();
     const currentDate = new Date();
     const parsedNextPerDate = new Date(nextPerDate);

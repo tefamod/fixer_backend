@@ -21,7 +21,7 @@ const carSchema = new mongoose.Schema({
   State: {
     type: String,
     enum: ["Repair", "good", "need to check", "Done"],
-    default: "Repair",
+    default: "good",
   },
   brand: {
     type: String,

@@ -157,7 +157,30 @@ exports.addCar = asyncHandler(async (req, res, next) => {
 // @desc Get list of all Cars
 // @Route GET /api/v1/Garage
 // @access public
-exports.getCars = factory.getAll(Car);
+exports.getCars = asyncHandler(async (req, res) => {
+  const nonAdminUsers = await User.find({ role: "user" }).select("name");
+  const nonAdminUsernames = nonAdminUsers.map((user) => user.name);
+
+  let filter = { ownerName: { $in: nonAdminUsernames } };
+
+  const documentsCounts = await Car.countDocuments(filter);
+  const apiFeatures = new ApiFeatures(Car.find(filter), req.query)
+    .paginate(documentsCounts)
+    .filter()
+    .search()
+    .limitFields();
+
+  const { mongooseQuery, paginationResult } = apiFeatures;
+  let documents = await mongooseQuery;
+
+  documents = documents.sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
+
+  res
+    .status(200)
+    .json({ results: documents.length, paginationResult, data: documents });
+});
 
 // @desc spacific car by id
 // @Route GET /api/v1/Garage/:id
