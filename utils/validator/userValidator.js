@@ -15,11 +15,7 @@ exports.createUserValidator = [
       return true;
     }),
 
-  check("email")
-    .notEmpty()
-    .withMessage("Email required")
-    .isEmail()
-    .withMessage("Invalid email address"),
+  check("email").optional().isEmail().withMessage("Invalid email address"),
   check("phoneNumber")
     .notEmpty()
     .isMobilePhone(["ar-EG"])
@@ -131,11 +127,7 @@ exports.updateLoggedUserValidator = [
       req.body.slug = slugify(val);
       return true;
     }),
-  check("email")
-    .notEmpty()
-    .withMessage("Email required")
-    .isEmail()
-    .withMessage("Invalid email address"),
+  check("email").optional().isEmail().withMessage("Invalid email address"),
   //.custom((val) =>
   //  User.findOne({ email: val }).then((user) => {
   //    if (user) {
