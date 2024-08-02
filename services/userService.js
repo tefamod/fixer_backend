@@ -122,11 +122,11 @@ exports.createUser = asyncHandler(async (req, res, next) => {
   //console.log("generated code", generatedCode);
   //console.log("generated Password", generatedPassword);
   // 1- Create user
-  const { email, carNumber, brand, clientType } = req.body;
-  const fuser = await Car.findOne({ email });
-  if (fuser) {
-    return next(new ApiError(`this email is already used ${fuser}`, 400));
-  }
+  const { carNumber, clientType } = req.body;
+  //const fuser = await Car.findOne({ email });
+  //if (fuser) {
+  //  return next(new ApiError(`this email is already used ${fuser}`, 400));
+  //}
   const existingCar = await Car.findOne({ carNumber });
   if (existingCar) {
     return next(
@@ -173,8 +173,8 @@ exports.createUser = asyncHandler(async (req, res, next) => {
   });
   const user = await User.create({
     name: req.body.name,
-    email: req.body.email,
     carNumber: req.body.carNumber,
+    email: req.body.email,
     phoneNumber: req.body.phoneNumber,
     password: generatedPassword,
     car: [
@@ -212,7 +212,7 @@ exports.createUser = asyncHandler(async (req, res, next) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Car Registration Details</title>
     <style>
-        /* Reset some default browser styles */
+        
         body, h1, p {
             margin: 0;
             padding: 0;
@@ -284,6 +284,7 @@ exports.createUser = asyncHandler(async (req, res, next) => {
 </html>
 `,
     });
+
     res
       .status(200)
       .json({ status: "Success", message: "Reset code sent to email" });

@@ -195,6 +195,7 @@
     "yocto-queue": "^0.1.0"
   },
   "devDependencies": {
+    "@types/node": "^22.1.0",
     "mocha": "^10.3.0"
   },
   "scripts": {
