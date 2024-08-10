@@ -30,61 +30,56 @@ exports.createReport = asyncHandler(async (req, res, next) => {
   */
   const date = new Date(year, month);
   const report = await MonthlyMoneyReport.findOne({ date });
-  if (report) {
-    delete report._doc.additions;
-    delete report._doc.date;
-    res.status(200).json({ data: report });
-  } else {
-    const repairs = await Repair.find({
-      $expr: {
-        $and: [
-          { $eq: [{ $year: "$createdAt" }, year] },
-          { $eq: [{ $month: "$createdAt" }, month] },
-        ],
-      },
-    });
 
-    const totalIncome = repairs.reduce(
-      (total, repair) => total + repair.priceAfterDiscount,
-      0
+  const repairs = await Repair.find({
+    $expr: {
+      $and: [
+        { $eq: [{ $year: "$createdAt" }, year] },
+        { $eq: [{ $month: "$createdAt" }, month] },
+      ],
+    },
+  });
+
+  const totalIncome = repairs.reduce(
+    (total, repair) => total + repair.priceAfterDiscount,
+    0
+  );
+  const salariesAggregate = await Worker.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalSalaries: { $sum: "$salaryAfterReword" }, // Summing the salaryAfterReword field
+      },
+    },
+  ]);
+
+  const totalSalaries =
+    salariesAggregate.length > 0 ? salariesAggregate[0].totalSalaries : 0;
+
+  const totalGain = totalIncome - totalSalaries;
+  if (totalIncome == 0) {
+    return next(
+      new apiError(
+        `There No report for this month ${month} and this year ${year}`,
+        404
+      )
     );
-    const salariesAggregate = await Worker.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalSalaries: { $sum: "$salaryAfterReword" }, // Summing the salaryAfterReword field
-        },
-      },
-    ]);
-
-    const totalSalaries =
-      salariesAggregate.length > 0 ? salariesAggregate[0].totalSalaries : 0;
-
-    const totalGain = totalIncome - totalSalaries;
-    if (totalIncome == 0) {
-      return next(
-        new apiError(
-          `There No report for this month ${month} and this year ${year}`,
-          404
-        )
-      );
-    }
-
-    const Money = await MonthlyMoneyReport.create({
-      date,
-      outCome: totalSalaries,
-      encome: totalIncome,
-      totalGain,
-    });
-
-    if (!Money) {
-      return next(new apiError("There was an error in report creation", 400));
-    }
-    delete Money._doc.additions;
-    delete Money._doc.date;
-
-    res.status(201).json({ data: Money });
   }
+
+  const Money = await MonthlyMoneyReport.create({
+    date,
+    outCome: totalSalaries,
+    encome: totalIncome,
+    totalGain,
+  });
+
+  if (!Money) {
+    return next(new apiError("There was an error in report creation", 400));
+  }
+  delete Money._doc.additions;
+  delete Money._doc.date;
+
+  res.status(201).json({ data: Money });
 });
 
 // @desc get all a monthly Report

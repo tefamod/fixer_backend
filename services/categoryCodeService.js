@@ -60,7 +60,9 @@ exports.updateCategory = asyncHandler(async (req, res, next) => {
 // @access private
 exports.searchInCategory = asyncHandler(async (req, res, next) => {
   const { searchString } = req.params;
-
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
   let query = CategoryCode.find();
 
   if (searchString) {
@@ -82,7 +84,7 @@ exports.searchInCategory = asyncHandler(async (req, res, next) => {
     }
   }
 
-  const documents = await query;
+  const documents = await query.sort({ createdAt: -1 }).skip(skip).limit(limit);
 
   if (!documents || documents.length === 0) {
     return next(
@@ -92,10 +94,17 @@ exports.searchInCategory = asyncHandler(async (req, res, next) => {
       )
     );
   }
-  sortedCategory = documents.sort(
+  const totalDocuments = await CategoryCode.countDocuments(query.getQuery());
+  const totalPages = Math.ceil(totalDocuments / limit);
+  res.status(200).json({
+    page,
+    totalPages,
+    totalDocuments,
+    data: documents,
+  });
+  /* sortedCategory = documents.sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-  );
-  res.status(200).json({ data: sortedCategory });
+  );*/
 });
 
 // @doc get all categories

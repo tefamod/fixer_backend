@@ -291,15 +291,15 @@ exports.updateCar = factory.updateOne(Car);
 // @route   get /api/v1/Garage/search
 // @access  Private
 exports.searchForallCars = asyncHandler(async (req, res, next) => {
-  const { searchString } = req.params; // Assuming the search string is provided in the params
-  // 1) Build query
+  const { searchString } = req.params;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
   let query = Car.find();
 
-  // If search string is provided, construct a query to search in all parameters
   if (searchString) {
     const schema = Car.schema;
     const paths = Object.keys(schema.paths);
-    // Print type of each path
     /*console.log("Path Types:");
     paths.forEach((path) => {
       console.log(`${path}: ${schema.paths[path].instance}`);
@@ -308,25 +308,27 @@ exports.searchForallCars = asyncHandler(async (req, res, next) => {
       const orConditions = paths
         .filter(
           (path) =>
-            schema.paths[path].instance === "String" && // Filter only string type parameters
+            schema.paths[path].instance === "String" && //filter only string type parameters
             (path === "ownerName" ||
               path === "carNumber" ||
               path === "chassisNumber" ||
               path === "model" ||
               path === "brand" ||
               path === "motorNumber" ||
-              path === "generatedCode") // Filter specific fields for search
+              path === "generatedCode") //filter specific fields for search
         )
         .map((path) => ({
           [path]: { $regex: searchString, $options: "i" },
-        })); // Construct regex conditions for each parameter
+        }));
 
-      // Add OR condition to the query
+      //add or condition to the query
       query = query.or(orConditions);
     }
   }
-  // 2) Execute query
-  const documents = await query;
+  const documents = await query
+    .sort({ lastRepairDate: -1 })
+    .skip(skip)
+    .limit(limit);
 
   if (!documents || documents.length === 0) {
     return next(
@@ -336,10 +338,14 @@ exports.searchForallCars = asyncHandler(async (req, res, next) => {
       )
     );
   }
-  sortedCars = documents.sort(
-    (a, b) => new Date(b.lastRepairDate) - new Date(a.lastRepairDate)
-  );
-  res.status(200).json({ data: sortedCars });
+  const totalDocuments = await Car.countDocuments(query.getQuery());
+  const totalPages = Math.ceil(totalDocuments / limit);
+  res.status(200).json({
+    page,
+    totalPages,
+    totalDocuments,
+    data: documents,
+  });
 });
 
 // @desc    search for reparing cars
@@ -347,46 +353,55 @@ exports.searchForallCars = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.searchForRepairingCars = asyncHandler(async (req, res, next) => {
   const { searchString } = req.params;
-  // 1) Build query
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
   let query = Car.find({ State: "Repair" });
 
   if (searchString) {
     const schema = Car.schema;
     const paths = Object.keys(schema.paths);
 
-    for (let i = 0; i < paths.length; i++) {
-      const orConditions = paths
-        .filter(
-          (path) =>
-            schema.paths[path].instance === "String" && // Filter only string type parameters
-            (path === "ownerName" ||
-              path === "carNumber" ||
-              path === "chassisNumber" ||
-              path === "model" ||
-              path === "brand" ||
-              path === "motorNumber" ||
-              path === "generatedCode") // Filter specific fields for search
-        )
-        .map((path) => ({
-          [path]: { $regex: searchString, $options: "i" },
-        }));
+    const orConditions = paths
+      .filter(
+        (path) =>
+          schema.paths[path].instance === "String" &&
+          (path === "ownerName" ||
+            path === "carNumber" ||
+            path === "chassisNumber" ||
+            path === "model" ||
+            path === "brand" ||
+            path === "motorNumber" ||
+            path === "generatedCode")
+      )
+      .map((path) => ({
+        [path]: { $regex: searchString, $options: "i" },
+      }));
 
-      query = query.or(orConditions);
-    }
+    query = query.or(orConditions);
   }
 
-  // 2) Execute query
-  const documents = await query;
+  const documents = await query
+    .sort({ lastRepairDate: -1 })
+    .skip(skip)
+    .limit(limit);
+
   if (!documents || documents.length === 0) {
     return next(
       new apiError(
-        `No document found for the search string ${searchString}`,
+        `No document found for the search string "${searchString}"`,
         404
       )
     );
   }
-  sortedCars = documents.sort(
-    (a, b) => new Date(b.lastRepairDate) - new Date(a.lastRepairDate)
-  );
-  res.status(200).json({ data: sortedCars });
+
+  const totalDocuments = await Car.countDocuments(query.getQuery());
+  const totalPages = Math.ceil(totalDocuments / limit);
+  res.status(200).json({
+    page,
+    totalPages,
+    totalDocuments,
+    data: documents,
+  });
 });

@@ -32,7 +32,9 @@ exports.getAllWorkers = factory.getAll(Worker);
 // @access private
 exports.getWorker = asyncHandler(async (req, res, next) => {
   const { searchString } = req.params;
-  // 1) Build query
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
   let query = Worker.find();
 
   if (searchString) {
@@ -53,8 +55,7 @@ exports.getWorker = asyncHandler(async (req, res, next) => {
       query = query.or(orConditions);
     }
   }
-  // 2) Execute query
-  const documents = await query;
+  const documents = await query.sort({ createdAt: -1 }).skip(skip).limit(limit);
 
   if (!documents || documents.length === 0) {
     return next(
@@ -64,10 +65,14 @@ exports.getWorker = asyncHandler(async (req, res, next) => {
       )
     );
   }
-  sortedRepairs = documents.sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-  );
-  res.status(200).json({ data: sortedRepairs });
+  const totalDocuments = await Worker.countDocuments(query.getQuery());
+  const totalPages = Math.ceil(totalDocuments / limit);
+  res.status(200).json({
+    page,
+    totalPages,
+    totalDocuments,
+    data: documents,
+  });
 });
 
 // @desc Update spacific Worker

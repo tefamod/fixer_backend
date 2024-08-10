@@ -422,7 +422,9 @@ exports.deleteLoggedUserData = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.searchForUser = asyncHandler(async (req, res, next) => {
   const { searchString } = req.params;
-  // 1) Build query
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
   let query = User.find();
 
   if (searchString) {
@@ -445,17 +447,19 @@ exports.searchForUser = asyncHandler(async (req, res, next) => {
       query = query.or(orConditions);
     }
   }
-  // 2) Execute query
-  const documents = await query;
+  const documents = await query.sort({ createdAt: -1 }).skip(skip).limit(limit);
 
   if (!documents || documents.length === 0) {
     return next(
-      new ApiError(
+      new apiError(
         `No document found for the search string ${searchString}`,
         404
       )
     );
   }
+  const totalDocuments = await User.countDocuments(query.getQuery());
+  const totalPages = Math.ceil(totalDocuments / limit);
+
   const formattedUsers = documents.map((user) => {
     const formattedUser = {
       name: user.name,
@@ -474,8 +478,10 @@ exports.searchForUser = asyncHandler(async (req, res, next) => {
 
     return formattedUser;
   });
-  sortedUsers = formattedUsers.sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-  );
-  res.status(200).json({ data: sortedUsers });
+  res.status(200).json({
+    page,
+    totalPages,
+    totalDocuments,
+    data: formattedUsers,
+  });
 });
