@@ -41,20 +41,21 @@ exports.getWorker = asyncHandler(async (req, res, next) => {
     const schema = Worker.schema;
     const paths = Object.keys(schema.paths);
 
-    for (let i = 0; i < paths.length; i++) {
-      const orConditions = paths
-        .filter(
-          (path) =>
-            schema.paths[path].instance === "String" && // Filter only string type parameters
-            (path === "IdNumber" || path === "name" || path === "phoneNumber") // Filter specific fields for search
-        )
-        .map((path) => ({
-          [path]: { $regex: searchString, $options: "i" },
-        }));
+    const orConditions = paths
+      .filter(
+        (path) =>
+          schema.paths[path].instance === "String" && // Filter only string type parameters
+          (path === "IdNumber" || path === "name" || path === "phoneNumber") // Filter specific fields for search
+      )
+      .map((path) => ({
+        [path]: { $regex: searchString, $options: "i" },
+      }));
 
+    if (orConditions.length > 0) {
       query = query.or(orConditions);
     }
   }
+
   const documents = await query.sort({ createdAt: -1 }).skip(skip).limit(limit);
 
   if (!documents || documents.length === 0) {
@@ -65,13 +66,25 @@ exports.getWorker = asyncHandler(async (req, res, next) => {
       )
     );
   }
+
   const totalDocuments = await Worker.countDocuments(query.getQuery());
   const totalPages = Math.ceil(totalDocuments / limit);
+
+  const formattedData = documents.map((doc) => ({
+    name: doc.name,
+    id: doc._id,
+    phoneNumber: doc.phoneNumber,
+    createdAt: doc.createdAt,
+  }));
+
   res.status(200).json({
-    page,
-    totalPages,
-    totalDocuments,
-    data: documents,
+    results: documents.length,
+    paginationResult: {
+      currentPage: page,
+      limit: limit,
+      numberOfPages: totalPages,
+    },
+    data: formattedData,
   });
 });
 

@@ -341,9 +341,12 @@ exports.searchForallCars = asyncHandler(async (req, res, next) => {
   const totalDocuments = await Car.countDocuments(query.getQuery());
   const totalPages = Math.ceil(totalDocuments / limit);
   res.status(200).json({
-    page,
-    totalPages,
-    totalDocuments,
+    results: documents.length,
+    paginationResult: {
+      currentPage: page,
+      limit: limit,
+      numberOfPages: totalPages,
+    },
     data: documents,
   });
 });
@@ -399,9 +402,12 @@ exports.searchForRepairingCars = asyncHandler(async (req, res, next) => {
   const totalDocuments = await Car.countDocuments(query.getQuery());
   const totalPages = Math.ceil(totalDocuments / limit);
   res.status(200).json({
-    page,
-    totalPages,
-    totalDocuments,
+    results: documents.length,
+    paginationResult: {
+      currentPage: page,
+      limit: limit,
+      numberOfPages: totalPages,
+    },
     data: documents,
   });
 });
