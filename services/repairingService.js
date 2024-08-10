@@ -124,12 +124,10 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
       if (!car) {
         return next(new apiError(`No car for this number ${carNumber}`, 404));
       }
-
-      // No need to manually trigger save here, findOneAndUpdate already saves the document
     }
 
     const completedServicesRatio =
-      totalServicesCount > 0 ? completedServices / totalServicesCount : 0; // Calculate completed services ratio
+      totalServicesCount > 0 ? completedServices / totalServicesCount : 0;
     const priceAfterDiscount = totalPrice - discount;
 
     let state = "";
@@ -310,7 +308,6 @@ exports.getCarRepairsByNumber = asyncHandler(async (req, res, next) => {
   const { carNumber } = req.params;
 
   try {
-    // Assuming carNumber is a unique identifier in your Car model
     const repairing = await Repairing.find({ carNumber });
 
     if (!repairing) {
@@ -344,7 +341,6 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
   const { newState } = req.body;
 
   try {
-    // Find the repairing document containing the service with the given ID
     const repairingDoc = await Repairing.findOne({ "Services._id": serviceId });
 
     if (!repairingDoc) {
@@ -356,7 +352,6 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
       );
     }
 
-    // Find the service within the Services array
     const service = repairingDoc.Services.find((s) => s._id.equals(serviceId));
 
     if (!service) {
@@ -368,7 +363,6 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
       );
     }
 
-    // Update the state of the service
     service.state = newState;
     for (const { state } of repairingDoc.Services) {
       totalServicesCount++;
@@ -395,14 +389,12 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
           new apiError(`No car for this number ${repairingDoc.carNumber}`, 404)
         );
       }
-
-      // No need to manually trigger save here, findOneAndUpdate already saves the document
     } else {
       repairingDoc.complete = false;
     }
 
     repairingDoc.completedServicesRatio =
-      totalServicesCount > 0 ? completedServices / totalServicesCount : 0; // Calculate completed services ratio
+      totalServicesCount > 0 ? completedServices / totalServicesCount : 0;
 
     let state = "";
 
@@ -415,7 +407,7 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
     }
     const car_state = await Car.findOneAndUpdate(
       { carNumber: repairingDoc.carNumber },
-      { State: state }, // Set the State field to the value of the state variable
+      { State: state },
       { new: true }
     );
 
