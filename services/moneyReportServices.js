@@ -13,6 +13,7 @@ const { worker } = require("workerpool");
 
 exports.createReport = asyncHandler(async (req, res, next) => {
   let totalGain = 0;
+  let additionsTotal = 0;
   const { year, month } = req.body;
 
   const date = new Date(year, month);
@@ -91,7 +92,6 @@ exports.createReport = asyncHandler(async (req, res, next) => {
     await report.save();
     res.status(200).json({ data: report });
   } else {
-    // Create a new report if none exists
     const Money = await MonthlyMoneyReport.create({
       date,
       outCome: totalSalaries,
