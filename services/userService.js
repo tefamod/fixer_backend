@@ -479,9 +479,12 @@ exports.searchForUser = asyncHandler(async (req, res, next) => {
     return formattedUser;
   });
   res.status(200).json({
-    page,
-    totalPages,
-    totalDocuments,
+    results: documents.length,
+    paginationResult: {
+      currentPage: page,
+      limit: limit,
+      numberOfPages: totalPages,
+    },
     data: formattedUsers,
   });
 });

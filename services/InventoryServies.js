@@ -84,9 +84,12 @@ exports.searchCom = asyncHandler(async (req, res, next) => {
   const totalDocuments = await Inventory.countDocuments(query.getQuery());
   const totalPages = Math.ceil(totalDocuments / limit);
   res.status(200).json({
-    page,
-    totalPages,
-    totalDocuments,
+    results: documents.length,
+    paginationResult: {
+      currentPage: page,
+      limit: limit,
+      numberOfPages: totalPages,
+    },
     data: documents,
   });
   /* sortedCategory = documents.sort(
