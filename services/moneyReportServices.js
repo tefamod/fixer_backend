@@ -124,7 +124,6 @@ exports.put_the_bills_rent = asyncHandler(async (req, res, next) => {
   report.outCome = report.outCome + total_bills;
   report.totalGain = report.totalGain - total_bills;
   report.save();
-  let totalGain = report.totalGain;
   const monthReport = await MonthlyMoneyReport.findOneAndUpdate(
     {
       $expr: {
@@ -135,7 +134,6 @@ exports.put_the_bills_rent = asyncHandler(async (req, res, next) => {
       },
     },
     {
-      totalGain,
       electricity_bill,
       water_bill,
       gas_bill,
@@ -177,7 +175,7 @@ exports.addorSubthing = asyncHandler(async (req, res, next) => {
       )
     );
   }
-  console.log(price);
+  //console.log(price);
 
   monthlyReport.additions.push({ title, price, date });
   if (price > 0) {
@@ -188,7 +186,7 @@ exports.addorSubthing = asyncHandler(async (req, res, next) => {
     monthlyReport.outCome += posPrice;
     monthlyReport.totalGain -= posPrice;
   }
-  console.log(monthlyReport.totalGain);
+  //console.log(monthlyReport.totalGain);
   monthlyReport.save();
   res.status(200).json({ data: monthlyReport });
 });
