@@ -7,51 +7,30 @@ const apiError = require("../utils/apiError");
 const asyncHandler = require("express-async-handler");
 const { worker } = require("workerpool");
 
-// @desc create a monthly Report
-// @Route POST /api/v1/monthlyReport
-// @access private
+function getUTCDate(year, month) {
+  return new Date(Date.UTC(year, month, 1));
+}
 
 exports.createReport = asyncHandler(async (req, res, next) => {
   let totalGain = 0;
-  let additionsTotal = 0;
   const { year, month } = req.body;
 
-  const date = new Date(year, month);
+  const date = getUTCDate(year, month - 1);
 
   const oldReport = await MonthlyMoneyReport.findOne({
-    $expr: {
-      $and: [
-        { $eq: [{ $year: "$date" }, year] },
-        { $eq: [{ $month: "$date" }, month] },
-      ],
+    date: {
+      $gte: date,
+      $lt: getUTCDate(year, month),
     },
   });
+
   if (oldReport) {
-    /* const totalBills =
-      (oldReport.electricity_bill || 0) +
-      (oldReport.water_bill || 0) +
-      (oldReport.gas_bill || 0) +
-      (oldReport.rent || 0);
-    if (Array.isArray(oldReport.additions) && oldReport.additions.length > 0) {
-      additionsTotal = oldReport.additions.reduce((sum, addition) => {
-        return sum + addition.price;
-      }, 0);
-    }
-
-    totalGain =
-      oldReport.encome - oldReport.outCome - totalBills + additionsTotal;
-
-    oldReport.totalGain = totalGain;
-
-    await oldReport.save();*/
     res.status(200).json({ data: oldReport });
   } else {
     const repairs = await Repair.find({
-      $expr: {
-        $and: [
-          { $eq: [{ $year: "$createdAt" }, year] },
-          { $eq: [{ $month: "$createdAt" }, month] },
-        ],
+      createdAt: {
+        $gte: date,
+        $lt: getUTCDate(year, month),
       },
     });
 
@@ -64,7 +43,7 @@ exports.createReport = asyncHandler(async (req, res, next) => {
       {
         $group: {
           _id: null,
-          totalSalaries: { $sum: "$salaryAfterReword" }, // Summing the salaryAfterReword field
+          totalSalaries: { $sum: "$salaryAfterReword" },
         },
       },
     ]);
@@ -73,6 +52,7 @@ exports.createReport = asyncHandler(async (req, res, next) => {
       salariesAggregate.length > 0 ? salariesAggregate[0].totalSalaries : 0;
 
     totalGain = totalIncome - totalSalaries;
+
     const Money = await MonthlyMoneyReport.create({
       date,
       outCome: totalSalaries,
@@ -96,22 +76,21 @@ exports.getAllReports = factory.getAll(MonthlyMoneyReport);
 // @desc put the bills and rent
 // @Route put /api/v1/monthlyReport:yrea_month
 // @access private
-
 exports.put_the_bills_rent = asyncHandler(async (req, res, next) => {
   let { year_month } = req.params;
   const { electricity_bill, water_bill, gas_bill, rent } = req.body;
   let total_bills = 0;
 
   if (electricity_bill < 0 || water_bill < 0 || gas_bill < 0 || rent < 0) {
-    return next(new apiError(`the values must be positive`, 400));
+    return next(new apiError("The values must be positive", 400));
   }
 
   let [year, month] = year_month.split("_").map(Number);
-  month = parseInt(month);
-  year = parseInt(year);
   if (isNaN(month) || isNaN(year)) {
     return next(new apiError("Invalid month and year", 400));
   }
+
+  //const date = getUTCDate(year, month-1);
   const report = await MonthlyMoneyReport.findOne({
     $expr: {
       $and: [
@@ -120,11 +99,18 @@ exports.put_the_bills_rent = asyncHandler(async (req, res, next) => {
       ],
     },
   });
+
+  if (!report) {
+    return next(new apiError(`No report found for ${month}/${year}`, 404));
+  }
+
   total_bills = electricity_bill + water_bill + gas_bill + rent;
-  report.outCome = report.outCome + total_bills;
-  report.totalGain = report.totalGain - total_bills;
-  report.save();
-  const monthReport = await MonthlyMoneyReport.findOneAndUpdate(
+  report.outCome += total_bills;
+  report.totalGain -= total_bills;
+
+  await report.save();
+
+  const updatedReport = await MonthlyMoneyReport.findOneAndUpdate(
     {
       $expr: {
         $and: [
@@ -142,18 +128,19 @@ exports.put_the_bills_rent = asyncHandler(async (req, res, next) => {
     { new: true }
   );
 
-  if (!monthReport) {
+  if (!updatedReport) {
     return next(
       new apiError(
-        `There No report for this month ${month} and this year ${year}`,
+        `There is no report for this month ${month} and year ${year}`,
         404
       )
     );
   }
 
-  delete monthReport._doc.additions;
-  delete monthReport._doc.date;
-  res.status(201).json({ data: monthReport });
+  delete updatedReport._doc.additions;
+  delete updatedReport._doc.date;
+
+  res.status(201).json({ data: updatedReport });
 });
 
 // @desc add  additions
@@ -163,21 +150,24 @@ exports.put_the_bills_rent = asyncHandler(async (req, res, next) => {
 exports.addorSubthing = asyncHandler(async (req, res, next) => {
   const { date, price, title } = req.body;
   let posPrice = 0;
-  const month = new Date(date).getMonth() + 1; // Months are zero-based in JavaScript, so we add 1
+
+  const month = new Date(date).getMonth();
   const year = new Date(date).getFullYear();
-  const dateM = new Date(year, month);
+
+  const dateM = getUTCDate(year, month);
+
   let monthlyReport = await MonthlyMoneyReport.findOne({ date: dateM });
+
   if (!monthlyReport) {
     return next(
       new apiError(
-        `There NO report for this month ${month} and this year ${year}`,
+        `There is no report for this month ${month + 1} and this year ${year}`,
         404
       )
     );
   }
-  //console.log(price);
-
   monthlyReport.additions.push({ title, price, date });
+
   if (price > 0) {
     monthlyReport.encome += price;
     monthlyReport.totalGain += price;
@@ -186,8 +176,9 @@ exports.addorSubthing = asyncHandler(async (req, res, next) => {
     monthlyReport.outCome += posPrice;
     monthlyReport.totalGain -= posPrice;
   }
-  //console.log(monthlyReport.totalGain);
-  monthlyReport.save();
+
+  await monthlyReport.save();
+
   res.status(200).json({ data: monthlyReport });
 });
 
