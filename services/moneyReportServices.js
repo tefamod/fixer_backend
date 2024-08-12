@@ -18,32 +18,6 @@ exports.createReport = asyncHandler(async (req, res, next) => {
 
   const date = new Date(year, month);
 
-  const repairs = await Repair.find({
-    $expr: {
-      $and: [
-        { $eq: [{ $year: "$createdAt" }, year] },
-        { $eq: [{ $month: "$createdAt" }, month] },
-      ],
-    },
-  });
-
-  const totalIncome = repairs.reduce(
-    (total, repair) => total + repair.priceAfterDiscount,
-    0
-  );
-
-  const salariesAggregate = await Worker.aggregate([
-    {
-      $group: {
-        _id: null,
-        totalSalaries: { $sum: "$salaryAfterReword" }, // Summing the salaryAfterReword field
-      },
-    },
-  ]);
-
-  const totalSalaries =
-    salariesAggregate.length > 0 ? salariesAggregate[0].totalSalaries : 0;
-
   const oldReport = await MonthlyMoneyReport.findOne({
     $expr: {
       $and: [
@@ -52,10 +26,8 @@ exports.createReport = asyncHandler(async (req, res, next) => {
       ],
     },
   });
-
   if (oldReport) {
-    // Check if bills exist and are numbers before calculating total bills
-    const totalBills =
+    /* const totalBills =
       (oldReport.electricity_bill || 0) +
       (oldReport.water_bill || 0) +
       (oldReport.gas_bill || 0) +
@@ -66,32 +38,41 @@ exports.createReport = asyncHandler(async (req, res, next) => {
       }, 0);
     }
 
-    totalGain = totalIncome - totalSalaries - totalBills + additionsTotal;
-  } else {
-    totalGain = totalIncome - totalSalaries;
-  }
+    totalGain =
+      oldReport.encome - oldReport.outCome - totalBills + additionsTotal;
 
-  if (totalIncome === 0) {
-    return next(
-      new apiError(
-        `There is no report for this month ${month} and this year ${year}`,
-        404
-      )
+    oldReport.totalGain = totalGain;
+
+    await oldReport.save();*/
+    res.status(200).json({ data: oldReport });
+  } else {
+    const repairs = await Repair.find({
+      $expr: {
+        $and: [
+          { $eq: [{ $year: "$createdAt" }, year] },
+          { $eq: [{ $month: "$createdAt" }, month] },
+        ],
+      },
+    });
+
+    const totalIncome = repairs.reduce(
+      (total, repair) => total + repair.priceAfterDiscount,
+      0
     );
-  }
 
-  // Search for an existing report for the given month and year
-  let report = await MonthlyMoneyReport.findOne({ date });
+    const salariesAggregate = await Worker.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalSalaries: { $sum: "$salaryAfterReword" }, // Summing the salaryAfterReword field
+        },
+      },
+    ]);
 
-  if (report) {
-    // Update the existing report
-    report.encome = totalIncome;
-    report.outCome = totalSalaries;
-    report.totalGain = totalGain;
+    const totalSalaries =
+      salariesAggregate.length > 0 ? salariesAggregate[0].totalSalaries : 0;
 
-    await report.save();
-    res.status(200).json({ data: report });
-  } else {
+    totalGain = totalIncome - totalSalaries;
     const Money = await MonthlyMoneyReport.create({
       date,
       outCome: totalSalaries,
@@ -196,6 +177,8 @@ exports.addorSubthing = asyncHandler(async (req, res, next) => {
       )
     );
   }
+  console.log(price);
+
   monthlyReport.additions.push({ title, price, date });
   if (price > 0) {
     monthlyReport.encome += price;
@@ -205,6 +188,7 @@ exports.addorSubthing = asyncHandler(async (req, res, next) => {
     monthlyReport.outCome += posPrice;
     monthlyReport.totalGain -= posPrice;
   }
+  console.log(monthlyReport.totalGain);
   monthlyReport.save();
   res.status(200).json({ data: monthlyReport });
 });
