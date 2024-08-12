@@ -189,55 +189,49 @@ exports.addorSubthing = asyncHandler(async (req, res, next) => {
 exports.getmonthWork = asyncHandler(async (req, res, next) => {
   let { year_month } = req.params;
 
-  // Splitting month_year into month and year
   let [year, month] = year_month.split("_").map(Number);
-  month = parseInt(month);
+  month = parseInt(month) - 1; // Adjust month to zero-based index
   year = parseInt(year);
-  // Validate month and year
+
   if (isNaN(month) || isNaN(year)) {
     return res
       .status(400)
       .json({ success: false, error: "Invalid month or year" });
   }
 
+  const startDate = getUTCDate(year, month);
+  const endDate = getUTCDate(year, month + 1);
+
   const repairs = await Repair.find({
-    $expr: {
-      $and: [
-        { $eq: [{ $year: "$createdAt" }, year] },
-        { $eq: [{ $month: "$createdAt" }, month] },
-      ],
+    createdAt: {
+      $gte: startDate,
+      $lt: endDate,
     },
   }).select("client brand category model createdAt priceAfterDiscount");
 
   const workers = await Worker.find().select("name salary");
 
-  /*const repairsWithServiceNames = await Promise.all(
-    repairs.map(async (repair) => {
-      const services = await repair.populate("Services", "name");
-      const serviceNameArray = services.Services.map(
-        (Services) => Services.name
-      );
-      return {
-        createdAt: repair.createdAt,
-        priceAfterDiscount: repair.priceAfterDiscount,
-        services: serviceNameArray,
-      };
-    })
-  );*/
-
-  const date = new Date(year, month);
-  const monthlyReport = await MonthlyMoneyReport.findOne({ date });
+  const monthlyReport = await MonthlyMoneyReport.findOne({
+    date: {
+      $gte: startDate,
+      $lt: endDate,
+    },
+  });
 
   const additions = monthlyReport ? monthlyReport.additions : [];
-  sortedRepairs = repairs.sort(
+
+  const sortedRepairs = repairs.sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
-  sortedWorkers = workers.sort(
+
+  const sortedWorkers = workers.sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
-  sortedAdditions = additions.sort(
+
+  const sortedAdditions = additions.sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
+
   res
     .status(200)
     .json({ data: { sortedRepairs, sortedWorkers, sortedAdditions } });
