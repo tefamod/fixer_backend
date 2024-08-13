@@ -30,7 +30,7 @@ exports.getAllWorkers = factory.getAll(Worker);
 // @desc Get spacific Worker
 // @Route GET /api/v1/Worker
 // @access private
-exports.getWorker = asyncHandler(async (req, res, next) => {
+exports.searchForWorker = asyncHandler(async (req, res, next) => {
   const { searchString } = req.params;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
@@ -45,7 +45,10 @@ exports.getWorker = asyncHandler(async (req, res, next) => {
       .filter(
         (path) =>
           schema.paths[path].instance === "String" && // Filter only string type parameters
-          (path === "IdNumber" || path === "name" || path === "phoneNumber") // Filter specific fields for search
+          (path === "IdNumber" ||
+            path === "name" ||
+            path === "phoneNumber" ||
+            path === "jobTitle") // Filter specific fields for search
       )
       .map((path) => ({
         [path]: { $regex: searchString, $options: "i" },
@@ -72,9 +75,9 @@ exports.getWorker = asyncHandler(async (req, res, next) => {
 
   const formattedData = documents.map((doc) => ({
     name: doc.name,
-    id: doc._id,
+    id: doc._id.toString(),
     phoneNumber: doc.phoneNumber,
-    createdAt: doc.createdAt,
+    createdAt: doc.createdAt.toISOString(),
   }));
 
   res.status(200).json({
@@ -88,8 +91,13 @@ exports.getWorker = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc Update spacific Worker
+// @desc get spacific Worker
 // @Route GET /api/v1/Worker
+// @access private
+exports.getSpacificWorker = factory.getOne(Worker);
+
+// @desc Update spacific Worker
+// @Route Put /api/v1/Worker
 // @access private
 exports.UpdateWorkerDetals = factory.updateOne(Worker);
 
