@@ -2,6 +2,7 @@ const CategoryCode = require("../models/categoryCode");
 const asyncHandler = require("express-async-handler");
 const factory = require("./handlersFactory");
 const apiError = require("../utils/apiError");
+const ApiFeatures = require("../utils/apiFeatures");
 
 // @doc create category code
 // @Route post /api/v1/Category/
@@ -63,7 +64,7 @@ exports.searchInCategory = asyncHandler(async (req, res, next) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
-  let query = CategoryCode.find();
+  let filter = {};
 
   if (searchString) {
     const schema = CategoryCode.schema;
@@ -80,38 +81,31 @@ exports.searchInCategory = asyncHandler(async (req, res, next) => {
       }));
 
     if (orConditions.length > 0) {
-      query = query.or(orConditions);
+      filter.$or = orConditions;
     }
   }
 
-  const documents = await query.sort({ createdAt: -1 }).skip(skip).limit(limit);
+  const documentsCounts = await CategoryCode.countDocuments(filter);
 
-  if (!documents || documents.length === 0) {
-    return next(
-      new apiError(
-        `No document found for the search string ${searchString}`,
-        404
-      )
-    );
-  }
+  const apiFeatures = new ApiFeatures(CategoryCode.find(filter), req.query)
+    .paginate(documentsCounts)
+    .filter()
+    .search("CategoryCode") // Assuming your ApiFeatures class has this method
+    .limitFields(); // Assuming you have a method to limit fields in ApiFeatures
 
-  const totalDocuments = await CategoryCode.countDocuments(query.getQuery());
-  const totalPages = Math.ceil(totalDocuments / limit);
+  const { mongooseQuery, paginationResult } = apiFeatures;
+  let documents = await mongooseQuery;
 
-  const formattedData = documents.map((doc) => ({
-    category: doc.category,
-    code: doc.code,
-    createdAt: doc.createdAt.toISOString(),
-  }));
+  // Sorting documents by createdAt in descending order
+  documents = documents.sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
 
+  // Returning the response with pagination and sorted data
   res.status(200).json({
     results: documents.length,
-    paginationResult: {
-      currentPage: page,
-      limit: limit,
-      numberOfPages: totalPages,
-    },
-    data: formattedData,
+    paginationResult,
+    data: documents,
   });
 });
 
