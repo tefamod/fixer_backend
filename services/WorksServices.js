@@ -148,7 +148,6 @@ exports.moneyFromToworker = asyncHandler(async (req, res, next) => {
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
 
-  // Checking if current date's month is greater than any of the dates' months
   worker.loans.forEach((loan) => {
     const loanMonth = new Date(loan.date).getMonth() + 1;
     const loanYear = new Date(loan.date).getFullYear();
@@ -190,7 +189,7 @@ exports.moneyFromToworker = asyncHandler(async (req, res, next) => {
 
   if (penalty < 0) {
     worker.penalty.push({ date, amount: penalty });
-    total = total + loans;
+    total = total + penalty;
   }
 
   if (reward > 0) {
