@@ -43,7 +43,7 @@ exports.createReport = asyncHandler(async (req, res, next) => {
       {
         $group: {
           _id: null,
-          totalSalaries: { $sum: "$salaryAfterReword" },
+          totalSalaries: { $sum: "$salaryAfterProcces" },
         },
       },
     ]);
@@ -74,14 +74,19 @@ exports.createReport = asyncHandler(async (req, res, next) => {
 exports.getAllReports = factory.getAll(MonthlyMoneyReport);
 
 // @desc put the bills and rent
-// @Route put /api/v1/monthlyReport:yrea_month
+// @Route put /api/v1/monthlyReport:year_month
 // @access private
 exports.put_the_bills_rent = asyncHandler(async (req, res, next) => {
   let { year_month } = req.params;
   const { electricity_bill, water_bill, gas_bill, rent } = req.body;
   let total_bills = 0;
 
-  if (electricity_bill < 0 || water_bill < 0 || gas_bill < 0 || rent < 0) {
+  if (
+    (electricity_bill !== undefined && electricity_bill < 0) ||
+    (water_bill !== undefined && water_bill < 0) ||
+    (gas_bill !== undefined && gas_bill < 0) ||
+    (rent !== undefined && rent < 0)
+  ) {
     return next(new apiError("The values must be positive", 400));
   }
 
@@ -90,7 +95,6 @@ exports.put_the_bills_rent = asyncHandler(async (req, res, next) => {
     return next(new apiError("Invalid month and year", 400));
   }
 
-  //const date = getUTCDate(year, month-1);
   const report = await MonthlyMoneyReport.findOne({
     $expr: {
       $and: [
@@ -104,43 +108,30 @@ exports.put_the_bills_rent = asyncHandler(async (req, res, next) => {
     return next(new apiError(`No report found for ${month}/${year}`, 404));
   }
 
-  total_bills = electricity_bill + water_bill + gas_bill + rent;
+  // Update only the fields that are provided
+  if (electricity_bill !== undefined) {
+    total_bills += electricity_bill - (report.electricity_bill || 0);
+    report.electricity_bill = electricity_bill;
+  }
+  if (water_bill !== undefined) {
+    total_bills += water_bill - (report.water_bill || 0);
+    report.water_bill = water_bill;
+  }
+  if (gas_bill !== undefined) {
+    total_bills += gas_bill - (report.gas_bill || 0);
+    report.gas_bill = gas_bill;
+  }
+  if (rent !== undefined) {
+    total_bills += rent - (report.rent || 0);
+    report.rent = rent;
+  }
+
   report.outCome += total_bills;
   report.totalGain -= total_bills;
 
   await report.save();
 
-  const updatedReport = await MonthlyMoneyReport.findOneAndUpdate(
-    {
-      $expr: {
-        $and: [
-          { $eq: [{ $year: "$date" }, year] },
-          { $eq: [{ $month: "$date" }, month] },
-        ],
-      },
-    },
-    {
-      electricity_bill,
-      water_bill,
-      gas_bill,
-      rent,
-    },
-    { new: true }
-  );
-
-  if (!updatedReport) {
-    return next(
-      new apiError(
-        `There is no report for this month ${month} and year ${year}`,
-        404
-      )
-    );
-  }
-
-  delete updatedReport._doc.additions;
-  delete updatedReport._doc.date;
-
-  res.status(201).json({ data: updatedReport });
+  res.status(200).json({ data: report });
 });
 
 // @desc add  additions
@@ -235,4 +226,27 @@ exports.getmonthWork = asyncHandler(async (req, res, next) => {
   res
     .status(200)
     .json({ data: { sortedRepairs, sortedWorkers, sortedAdditions } });
+});
+
+// @desc delete  report
+// @Route delete /api/v1/monthlyReport/delete
+// @access private
+
+exports.deleteReport = asyncHandler(async (req, res, next) => {
+  let { year_month } = req.params;
+
+  let [year, month] = year_month.split("_").map(Number);
+  month = parseInt(month) - 1; // Adjust month to zero-based index
+  year = parseInt(year);
+  const dateM = getUTCDate(year, month);
+
+  let monthlyReport = await MonthlyMoneyReport.findOneAndDelete({
+    date: dateM,
+  });
+
+  if (!monthlyReport) {
+    return next(new apiError(`No Report for this date ${dateM}`, 404));
+  }
+
+  res.status(204).send();
 });
