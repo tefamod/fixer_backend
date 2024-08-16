@@ -23,12 +23,15 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
     const repairing = await Repairing.findById(car.repairing_id);
 
     if (!repairing) {
-      return next(
-        new apiError(
-          `Can't find services for this car number ${carNumber}`,
-          404
-        )
-      );
+      res.status(200).json({
+        data: {
+          state: car.State,
+          lastRepairDate: car.lastRepairDate,
+          nextRepairDate: car.nextRepairDate,
+          periodicRepairs: car.periodicRepairs,
+          nonperiodicRepairs: car.nonPeriodicRepairs,
+        },
+      });
     }
     // Map each repairing object to a modified object with only specific fields
     /*    const modifiedRepairing = repairing.map((repair) => ({
