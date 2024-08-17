@@ -23,11 +23,22 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
     const repairing = await Repairing.findById(car.repairing_id);
 
     if (!repairing) {
+      if (car.nextRepairDate == undefined && car.lastRepairDate == undefined) {
+        const nextRepairDate = "-/-/-";
+        const lastRepairDate = "-/-/-";
+        res.status(200).json({
+          data: {
+            state: car.State,
+            lastRepairDate: lastRepairDate,
+            nextRepairDate: nextRepairDate,
+            periodicRepairs: car.periodicRepairs,
+            nonperiodicRepairs: car.nonPeriodicRepairs,
+          },
+        });
+      }
       res.status(200).json({
         data: {
           state: car.State,
-          lastRepairDate: car.lastRepairDate,
-          nextRepairDate: car.nextRepairDate,
           periodicRepairs: car.periodicRepairs,
           nonperiodicRepairs: car.nonPeriodicRepairs,
         },

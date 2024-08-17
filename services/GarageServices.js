@@ -411,3 +411,38 @@ exports.searchForRepairingCars = asyncHandler(async (req, res, next) => {
     data: documents,
   });
 });
+/*
+// @desc    get app version
+// @route   get /api/v1/Garage/appVersion/:id
+// @access  Private
+
+exports.getAppVersion = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const car = await Car.findById(id);
+
+  if (!car) {
+    return next(new apiError(`Can't find services for this owner ${id}`, 404));
+  }
+
+  res.status(200).json(car.appVersion);
+});
+// @desc    put app version
+// @route   put /api/v1/Garage/appVersion/:id
+// @access  Private
+
+exports.putAppVersion = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const { newAppVersion } = req.body;
+  const car = await Car.findByIdAndUpdate(
+    id,
+    { appVersion: newAppVersion },
+    { new: true }
+  );
+
+  if (!car) {
+    return next(new apiError(`Can't find services for this owner ${id}`, 404));
+  }
+
+  res.status(200).json(car.appVersion);
+});
+*/
