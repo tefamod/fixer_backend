@@ -15,19 +15,25 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
     const car = await Car.findOne({ carNumber });
 
     if (!car) {
-      return next(
-        new apiError(`Can't find car for this car number ${carNumber}`, 404)
+      returnnext(
+        newapiError(`Can't find car for this car number ${carNumber}`, 404)
       );
     }
-    // Assuming carNumber is a unique identifier in your Car model
+
     const repairing = await Repairing.findById(car.repairing_id);
 
     if (!repairing) {
-      if (car.nextRepairDate == undefined && car.lastRepairDate == undefined) {
+      if (
+        car.nextRepairDate === undefined &&
+        car.lastRepairDate === undefined
+      ) {
         const nextRepairDate = "-/-/-";
         const lastRepairDate = "-/-/-";
-        res.status(200).json({
+        return res.status(200).json({
           data: {
+            createdDate: "-/-/-",
+            expectedDate: "-/-/-",
+            completedServicesRatio: 0,
             state: car.State,
             lastRepairDate: lastRepairDate,
             nextRepairDate: nextRepairDate,
@@ -36,7 +42,8 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
           },
         });
       }
-      res.status(200).json({
+
+      return res.status(200).json({
         data: {
           state: car.State,
           periodicRepairs: car.periodicRepairs,
@@ -44,19 +51,8 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
         },
       });
     }
-    // Map each repairing object to a modified object with only specific fields
-    /*    const modifiedRepairing = repairing.map((repair) => ({
-      createdDate: repair.createdAt,
-      complete: repair.complete,
-      expectedDate: repair.expectedDate,
-      completedServicesRatio: repair.completedServicesRatio,
-      state: repair.state,
-      lastRepairDate: car.lastRepairDate,
-      nextRepairDate: car.nextRepairDate,
-      periodicRepairs: car.periodicRepairs,
-      nonperiodicRepairs: car.nonPeriodicRepairs,
-    }));*/
-    res.status(200).json({
+
+    return res.status(200).json({
       data: {
         createdDate: repairing.createdAt,
         expectedDate: repairing.expectedDate,
