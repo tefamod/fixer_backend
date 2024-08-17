@@ -16,6 +16,7 @@ const homeRoute = require("./routes/homeRoute");
 const workerRoute = require("./routes/WorkersRoute");
 const MonthlyReport = require("./routes/monthlyReportRoute");
 const CategoryCode = require("./routes/CategoryCodeRoute");
+const appVersion = require("./routes/appVersionRoute");
 const globalError = require("./middlewares/errorMiddleWare");
 
 //db connection
@@ -40,6 +41,7 @@ app.use("/api/V1/Home", homeRoute);
 app.use("/api/V1/Worker", workerRoute);
 app.use("/api/V1/MonthlyReport", MonthlyReport);
 app.use("/api/V1/Category", CategoryCode);
+app.use("/api/V1/appVersion", appVersion);
 app.all("*", (req, res, next) => {
   //create error and send it to error handling middleware
   // eslint-disable-next-line new-cap
