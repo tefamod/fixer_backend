@@ -46,8 +46,10 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
       return res.status(200).json({
         data: {
           state: car.State,
-          periodicRepairs: car.periodicRepairs,
-          nonperiodicRepairs: car.nonPeriodicRepairs,
+        lastRepairDate: car.lastRepairDate,
+        nextRepairDate: car.nextRepairDate,
+        periodicRepairs: car.periodicRepairs,
+        nonperiodicRepairs: car.nonPeriodicRepairs,
         },
       });
     }
