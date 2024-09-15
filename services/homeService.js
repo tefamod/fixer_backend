@@ -16,7 +16,7 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
 
     if (!car) {
       returnnext(
-        newapiError(`Can't find car for this car number ${carNumber}`, 404)
+        new apiError(`Can't find car for this car number ${carNumber}`, 404)
       );
     }
 
@@ -27,29 +27,33 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
         car.nextRepairDate === undefined &&
         car.lastRepairDate === undefined
       ) {
-        const nextRepairDate = "-/-/-";
-        const lastRepairDate = "-/-/-";
         return res.status(200).json({
           data: {
             createdDate: "-/-/-",
             expectedDate: "-/-/-",
             completedServicesRatio: 0,
             state: car.State,
-            lastRepairDate: lastRepairDate,
-            nextRepairDate: nextRepairDate,
+            lastRepairDate: "-/-/-",
+            nextRepairDate: "-/-/-",
             periodicRepairs: car.periodicRepairs,
             nonperiodicRepairs: car.nonPeriodicRepairs,
           },
         });
       }
-
-      return res.status(200).json({
-        data: {
-          state: car.State,
-          periodicRepairs: car.periodicRepairs,
-          nonperiodicRepairs: car.nonPeriodicRepairs,
-        },
-      });
+      if (car.nextRepairDate) {
+        return res.status(200).json({
+          data: {
+            createdDate: "-/-/-",
+            expectedDate: "-/-/-",
+            completedServicesRatio: 0,
+            state: car.State,
+            lastRepairDate: car.lastRepairDate,
+            nextRepairDate: car.nextRepairDate,
+            periodicRepairs: car.periodicRepairs,
+            nonperiodicRepairs: car.nonPeriodicRepairs,
+          },
+        });
+      }
     }
 
     return res.status(200).json({
