@@ -40,6 +40,7 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
           },
         });
       }
+
       if (car.nextRepairDate) {
         return res.status(200).json({
           data: {
@@ -54,23 +55,6 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
           },
         });
       }
-<<<<<<< HEAD
-=======
-
-      if(car.nextRepairDate){
-      return res.status(200).json({
-        data: {
-        createdDate: "-/-/-",
-        expectedDate: "-/-/-",
-        completedServicesRatio: 0,
-        state: car.State,
-        lastRepairDate: car.lastRepairDate,
-        nextRepairDate: car.nextRepairDate,
-        periodicRepairs: car.periodicRepairs,
-        nonperiodicRepairs: car.nonPeriodicRepairs,
-        },
-      });}
->>>>>>> f35c921467642f57eaaf905e3a662bfe539cde91
     }
 
     return res.status(200).json({

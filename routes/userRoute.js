@@ -17,6 +17,7 @@ const {
   resizeImage,
   changeUserPassword,
   searchForUser,
+  suggestNextCodeNumber,
   getLoggedUserData,
   updateLoggedUserPassword,
   updateLoggedUserData,
@@ -51,5 +52,6 @@ router
   .put(uploadUserImage, resizeImage, updateUserValidator, updateUser);
 router.route("/active/:id").put(makeUserUnactive);
 router.route("/search/:searchString").get(searchForUser);
+router.route("/carCode/:clientType").get(suggestNextCodeNumber);
 
 module.exports = router;
