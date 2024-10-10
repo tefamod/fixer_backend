@@ -74,11 +74,25 @@ process.on("unhandledRejection", (err) => {
 cron.schedule("*/14 * * * *", () => {
   console.log("Pinging the server to keep it alive...");
   axios
-    .get("https://https://fixer-backend-rtw4.onrender.com/api/ping") // Replace with your actual Render app URL
+    .get(`${process.env.BASE_URL}/api/ping`)
+
     .then((response) => {
       console.log("Ping successful:", response.data);
     })
     .catch((error) => {
-      console.error("Error pinging the server:", error);
+      if (error.response) {
+        // Server responded with a status other than 2xx
+        console.error(
+          "Server responded with an error:",
+          error.response.status,
+          error.response.data
+        );
+      } else if (error.request) {
+        // No response received
+        console.error("No response received:", error.request);
+      } else {
+        // Error setting up the request
+        console.error("Error setting up the request:", error.message);
+      }
     });
 });
