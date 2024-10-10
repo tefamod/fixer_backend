@@ -12,6 +12,7 @@
     "argparse": "^2.0.1",
     "array-flatten": "^1.1.1",
     "assertion-error": "^2.0.1",
+    "axios": "^1.7.7",
     "balanced-match": "^1.0.2",
     "basic-auth": "^2.0.1",
     "bcryptjs": "^2.4.3",
