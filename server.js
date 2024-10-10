@@ -1,6 +1,8 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
+const cron = require("node-cron");
+const axios = require("axios");
 
 dotenv.config({ path: "config.env" });
 const apiError = require("./utils/apiError");
@@ -42,6 +44,11 @@ app.use("/api/V1/Worker", workerRoute);
 app.use("/api/V1/MonthlyReport", MonthlyReport);
 app.use("/api/V1/Category", CategoryCode);
 app.use("/api/V1/appVersion", appVersion);
+// ping api
+app.get("/api/ping", (req, res) => {
+  res.status(200).send("Server is alive!");
+});
+
 app.all("*", (req, res, next) => {
   //create error and send it to error handling middleware
   // eslint-disable-next-line new-cap
@@ -61,4 +68,17 @@ process.on("unhandledRejection", (err) => {
     console.error(`Shutting down ......`);
     process.exit(1);
   });
+});
+
+//self-ping cron job to keep the server awake
+cron.schedule("*/14 * * * *", () => {
+  console.log("Pinging the server to keep it alive...");
+  axios
+    .get("https://https://fixer-backend-rtw4.onrender.com/api/ping") // Replace with your actual Render app URL
+    .then((response) => {
+      console.log("Ping successful:", response.data);
+    })
+    .catch((error) => {
+      console.error("Error pinging the server:", error);
+    });
 });
