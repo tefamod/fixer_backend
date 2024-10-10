@@ -564,7 +564,7 @@ exports.suggestNextCodeNumber = asyncHandler(async (req, res, next) => {
       )
     );
   }
-
+  let newCarCode = 0;
   const regex = new RegExp("^" + categoryCode.code + "\\d+$", "i");
 
   const cars = await Car.aggregate([
