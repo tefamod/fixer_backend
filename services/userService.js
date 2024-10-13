@@ -137,8 +137,21 @@ exports.createUser = asyncHandler(async (req, res, next) => {
       )
     );
   }
-  if (req.body.manually == "True") {
-    newCarCode = req.body.carCode;
+  if (req.body.manually == "True" || req.body.manually == "true") {
+    const categoryCode = await CategoryCode.findOne({ category: clientType });
+    if (!categoryCode) {
+      return next(
+        new ApiError(`There is no type with this name ${clientType}`, 400)
+      );
+    }
+    const carCode = req.body.carCode;
+    const parsedCarCode = parseInt(carCode, 10);
+
+    if (isNaN(parsedCarCode) || !Number.isInteger(parsedCarCode)) {
+      return next(new ApiError(`Invalid carCode. It must be a number.`, 400));
+    }
+
+    newCarCode = categoryCode.code + carCode;
   } else {
     const categoryCode = await CategoryCode.findOne({ category: clientType });
     if (!categoryCode) {
