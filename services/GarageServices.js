@@ -27,9 +27,11 @@ exports.addCar = asyncHandler(async (req, res, next) => {
     distances,
     motorNumber,
     clientType,
+    manually,
   } = req.body;
 
   try {
+    let newCarCode;
     const existingCar = await Car.findOne({ carNumber });
     if (existingCar) {
       return next(
@@ -39,7 +41,7 @@ exports.addCar = asyncHandler(async (req, res, next) => {
         )
       );
     }
-    // Check for an existing car with the same chassis number if provided
+
     if (chassisNumber) {
       const existingCarWithChassis = await Car.findOne({ chassisNumber });
       if (existingCarWithChassis) {
@@ -52,7 +54,6 @@ exports.addCar = asyncHandler(async (req, res, next) => {
       }
     }
 
-    // Check for an existing car with the same motor number if provided
     if (motorNumber) {
       const existingCarWithMotor = await Car.findOne({ motorNumber });
       if (existingCarWithMotor) {
@@ -64,29 +65,68 @@ exports.addCar = asyncHandler(async (req, res, next) => {
         );
       }
     }
-    const categoryCode = await CategoryCode.findOne({ category: clientType });
-    if (!categoryCode) {
-      return next(
-        new apiError(`there is no type with this name ${clientType}`, 400)
-      );
-    }
-    const regex = new RegExp("^" + categoryCode.code + "\\d+$", "i");
-    const latestCar = await Car.findOne({ generatedCode: regex })
-      .sort({ generatedCode: -1 })
-      .limit(1);
+    if (manually == "True" || manually == "true") {
+      const categoryCode = await CategoryCode.findOne({ category: clientType });
+      if (!categoryCode) {
+        return next(
+          new apiError(`There is no type with this name ${clientType}`, 400)
+        );
+      }
+      const carCode = req.body.carCode;
+      const parsedCarCode = parseInt(carCode, 10);
 
-    let newCarCode;
-    if (latestCar) {
-      const lastNumber = parseInt(
-        latestCar.generatedCode.replace(categoryCode.code, "")
-      );
+      if (isNaN(parsedCarCode) || !Number.isInteger(parsedCarCode)) {
+        return next(new apiError(`Invalid carCode. It must be a number.`, 400));
+      }
 
-      const nextNumber = lastNumber + 1;
-      newCarCode = categoryCode.code + nextNumber;
+      newCarCode = categoryCode.code + carCode;
     } else {
-      newCarCode = categoryCode.code + "1";
-    }
+      const categoryCode = await CategoryCode.findOne({ category: clientType });
+      if (!categoryCode) {
+        return next(
+          new apiError(`There is no type with this name ${clientType}`, 400)
+        );
+      }
 
+      const regex = new RegExp("^" + categoryCode.code + "\\d+$", "i");
+
+      const cars = await Car.aggregate([
+        { $match: { generatedCode: regex } },
+        {
+          $project: {
+            numericCode: {
+              $toInt: {
+                $substr: [
+                  "$generatedCode",
+                  { $strLenCP: categoryCode.code },
+                  { $strLenCP: "$generatedCode" },
+                ],
+              },
+            },
+          },
+        },
+      ]);
+
+      const validCodes = cars
+        .map((car) => car.numericCode)
+        .filter((num) => !isNaN(num) && num > 0)
+        .sort((a, b) => a - b);
+
+      if (validCodes.length > 0) {
+        for (let i = 0; i < validCodes.length; i++) {
+          if (validCodes[i] !== i + 1) {
+            newCarCode = categoryCode.code + (i + 1);
+            break;
+          }
+        }
+
+        if (!newCarCode) {
+          newCarCode = categoryCode.code + (validCodes.length + 1);
+        }
+      } else {
+        newCarCode = categoryCode.code + "1";
+      }
+    }
     const user = await User.findById(id);
     if (!user) {
       return next(
