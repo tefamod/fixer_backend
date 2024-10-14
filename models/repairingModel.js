@@ -16,6 +16,10 @@ const mongoose = require("mongoose");
 const repairingSchema = new mongoose.Schema(
   {
     client: { type: String },
+    genId: {
+      type: String,
+      unique: [true, "there is a Car with the same Number"],
+    },
     brand: { type: String },
     category: { type: String },
     model: { type: String },
