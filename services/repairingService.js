@@ -18,6 +18,8 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
   let periodicRepairs = 0;
   let nonperiodicRepairs = 0;
   let complete = false;
+  let newId = 0;
+  const const_part_of_id = "2021";
   const {
     components,
     services,
@@ -28,7 +30,67 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     daysItTake,
     nextPerDate,
   } = req.body;
+  if (req.body.manually == "True" || req.body.manually == true) {
+    const id = req.body.id;
+    const parsedCarCode = parseInt(id, 10);
 
+    if (isNaN(parsedCarCode) || !Number.isInteger(parsedCarCode)) {
+      return next(new apiError(`Invalid carCode. It must be a number.`, 400));
+    }
+
+    newId = const_part_of_id + "-" + parsedCarCode;
+    const exRepair = await Repairing.findOne({ genId: newId });
+    if (exRepair) {
+      return next(
+        new apiError(`Repairing with id ${newId} already exists.`, 400)
+      );
+    }
+  } else {
+    const regex = new RegExp("^" + const_part_of_id + "\\d+$", "i");
+
+    const repairs = await Repairing.aggregate([
+      { $match: { genId: regex } }, // Match genId starting with '2021'
+      {
+        $project: {
+          numericCode: {
+            $toInt: {
+              $substr: [
+                "$genId",
+                { $strLenCP: const_part_of_id }, // Skip the first 4 characters (2021)
+                {
+                  $subtract: [
+                    { $strLenCP: "$genId" },
+                    { $strLenCP: const_part_of_id },
+                  ],
+                }, // Get the remaining part
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    const validCodes = repairs
+      .map((repair) => repair.numericCode)
+      .filter((num) => !isNaN(num) && num > 0)
+      .sort((a, b) => a - b);
+
+    // Find the first missing number or create the next newId
+    if (validCodes.length > 0) {
+      for (let i = 0; i < validCodes.length; i++) {
+        if (validCodes[i] !== i + 1) {
+          newId = const_part_of_id + "-" + (i + 1);
+          break;
+        }
+      }
+
+      if (!newId) {
+        newId = const_part_of_id + "-" + (validCodes.length + 1);
+      }
+    } else {
+      newId = const_part_of_id + "-" + "1";
+    }
+  }
   if (!components || !services || !additions) {
     return next(
       new apiError(
@@ -89,6 +151,9 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     }*/
 
     const reCar = await Car.findOne({ carNumber: carNumber });
+    if (!reCar) {
+      return next(new apiError(`No car for this number ${carNumber}`, 404));
+    }
     periodicRepairs = reCar.periodicRepairs;
     nonperiodicRepairs = reCar.nonPeriodicRepairs;
     if (type == "periodic" || type == "nonPeriodic") {
@@ -165,6 +230,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     const car = await Car.findOne({ carNumber });
     const repair = await Repairing.create({
       client: car.ownerName,
+      genId: newId,
       brand: car.brand,
       category: car.category,
       model: car.model,
