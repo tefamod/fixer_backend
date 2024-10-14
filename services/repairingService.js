@@ -19,7 +19,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
   let nonperiodicRepairs = 0;
   let complete = false;
   let newId = 0;
-  const const_part_of_id = "2021";
+  const const_part_of_id = "2021-";
   const {
     components,
     services,
@@ -38,7 +38,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
       return next(new apiError(`Invalid carCode. It must be a number.`, 400));
     }
 
-    newId = const_part_of_id + "-" + parsedCarCode;
+    newId = const_part_of_id + parsedCarCode;
     const exRepair = await Repairing.findOne({ genId: newId });
     if (exRepair) {
       return next(
@@ -79,16 +79,16 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     if (validCodes.length > 0) {
       for (let i = 0; i < validCodes.length; i++) {
         if (validCodes[i] !== i + 1) {
-          newId = const_part_of_id + "-" + (i + 1);
+          newId = const_part_of_id + (i + 1);
           break;
         }
       }
 
       if (!newId) {
-        newId = const_part_of_id + "-" + (validCodes.length + 1);
+        newId = const_part_of_id + (validCodes.length + 1);
       }
     } else {
-      newId = const_part_of_id + "-" + "1";
+      newId = const_part_of_id + "1";
     }
   }
   if (!components || !services || !additions) {
