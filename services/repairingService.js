@@ -29,6 +29,8 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     discount,
     daysItTake,
     nextPerDate,
+    note1,
+    note2,
   } = req.body;
   if (req.body.manually == "True" || req.body.manually == true) {
     const id = req.body.id;
@@ -246,6 +248,8 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
       complete,
       completedServicesRatio,
       state,
+      Note1: note1,
+      Note2: note2,
     });
     if (!complete) {
       const car = await Car.findOneAndUpdate(
@@ -513,9 +517,6 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
 // @access private
 exports.getAllComRepairs = asyncHandler(async (req, res, next) => {
   let filter = { complete: true };
-  if (req.filterObj) {
-    filter = { ...filter, ...req.filterObj };
-  }
 
   const documentsCounts = await Repairing.countDocuments(filter);
   const apiFeatures = new ApiFeatures(Repairing.find(filter), req.query)
@@ -664,6 +665,8 @@ exports.getRepairsReport = asyncHandler(async (req, res, next) => {
     distances: carInfo.distances,
     model: carInfo.model,
     clientCode: carInfo.generatedCode,
+    note1: Repair.Note1,
+    note2: Repair.Note2,
   };
   res.status(200).json({
     repair: Repair,

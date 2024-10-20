@@ -104,6 +104,12 @@ const repairingSchema = new mongoose.Schema(
     completedServicesRatio: {
       type: Number,
     },
+    Note1: {
+      type: String,
+    },
+    Note2: {
+      type: String,
+    },
   },
 
   // مفيده ليا لو عايز اجيب ال منتج الاحدث بالوقت
