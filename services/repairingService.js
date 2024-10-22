@@ -51,20 +51,20 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     const regex = new RegExp("^" + const_part_of_id + "\\d+$", "i");
 
     const repairs = await Repairing.aggregate([
-      { $match: { genId: regex } }, // Match genId starting with '2021'
+      { $match: { genId: regex } }, //match genId starting with '2021'
       {
         $project: {
           numericCode: {
             $toInt: {
               $substr: [
                 "$genId",
-                { $strLenCP: const_part_of_id }, // Skip the first 4 characters (2021)
+                { $strLenCP: const_part_of_id }, //skip 2021
                 {
                   $subtract: [
                     { $strLenCP: "$genId" },
                     { $strLenCP: const_part_of_id },
                   ],
-                }, // Get the remaining part
+                },
               ],
             },
           },
@@ -77,7 +77,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
       .filter((num) => !isNaN(num) && num > 0)
       .sort((a, b) => a - b);
 
-    // Find the first missing number or create the next newId
+    //find the first missing number or create the next newId
     if (validCodes.length > 0) {
       for (let i = 0; i < validCodes.length; i++) {
         if (validCodes[i] !== i + 1) {
@@ -672,4 +672,55 @@ exports.getRepairsReport = asyncHandler(async (req, res, next) => {
     repair: Repair,
     data: info,
   });
+});
+
+exports.suggestNextCodeNumber = asyncHandler(async (req, res, next) => {
+  const const_part_of_id = "2021";
+  let newId = null;
+  const regex = new RegExp("^" + const_part_of_id + "\\d+$", "i");
+
+  const repairs = await Repairing.aggregate([
+    { $match: { genId: regex } },
+    {
+      $project: {
+        numericCode: {
+          $toInt: {
+            $substr: [
+              "$genId",
+              { $strLenCP: const_part_of_id },
+              {
+                $subtract: [
+                  { $strLenCP: "$genId" },
+                  { $strLenCP: const_part_of_id },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    },
+  ]);
+
+  const validCodes = repairs
+    .map((repair) => repair.numericCode)
+    .filter((num) => !isNaN(num) && num > 0)
+    .sort((a, b) => a - b);
+
+  //find the first missing number or create the next newId
+  if (validCodes.length > 0) {
+    for (let i = 0; i < validCodes.length; i++) {
+      if (validCodes[i] !== i + 1) {
+        newId = i + 1;
+        break;
+      }
+    }
+
+    if (!newId) {
+      newId = validCodes.length + 1;
+    }
+  } else {
+    newId = "1";
+  }
+
+  res.status(200).json({ data: newId });
 });
