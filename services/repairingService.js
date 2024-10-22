@@ -31,6 +31,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     nextPerDate,
     note1,
     note2,
+    distance,
   } = req.body;
   if (req.body.manually == "True" || req.body.manually == true) {
     const id = req.body.id;
@@ -171,6 +172,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     }
     reCar.periodicRepairs = periodicRepairs;
     reCar.nonPeriodicRepairs = nonperiodicRepairs;
+    reCar.distances = distance;
 
     reCar.save();
     const currentDate = new Date();
@@ -250,6 +252,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
       state,
       Note1: note1,
       Note2: note2,
+      distance,
     });
     if (!complete) {
       const car = await Car.findOneAndUpdate(

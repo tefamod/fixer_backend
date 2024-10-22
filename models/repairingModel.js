@@ -110,6 +110,9 @@ const repairingSchema = new mongoose.Schema(
     Note2: {
       type: String,
     },
+    distance: {
+      type: Number,
+    },
   },
 
   // مفيده ليا لو عايز اجيب ال منتج الاحدث بالوقت
