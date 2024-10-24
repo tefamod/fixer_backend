@@ -473,11 +473,17 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
 
     if (!repairingDoc.complete) {
       state = "Repair";
+      const car = await Car.findOneAndUpdate(
+        { carNumber: repairingDoc.carNumber },
+        { repairing_id: repairingDoc._id, repairing: true },
+        { new: true }
+      );
     } else if (currentDate < parsedNextPerDate && repairingDoc.complete) {
       state = "Good";
     } else {
       state = "Need to check";
     }
+
     const car_state = await Car.findOneAndUpdate(
       { carNumber: repairingDoc.carNumber },
       { State: state },
@@ -501,6 +507,7 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
         new apiError(`No car for this number ${repairingDoc.carNumber}`, 404)
       );
     }
+
     await service.save();
     await car_ratio.save();
 
