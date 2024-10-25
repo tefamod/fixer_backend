@@ -734,3 +734,24 @@ exports.suggestNextCodeNumber = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ data: newId });
 });
+
+// @desc upadete repair car
+// @Route PUT /api/v1/repair/update/:id
+// @access private
+exports.updateRepair = asyncHandler(async (req, res, next) => {
+  const { note1, note2 } = req.body;
+  const document = await Repairing.findByIdAndUpdate(
+    req.params.id,
+    { Note1: note1, Note2: note2 },
+    {
+      new: true,
+    }
+  );
+
+  if (!document) {
+    return next(new apiError(`No document for this id ${req.params.id}`, 404));
+  }
+  // Trigger "save" event when update document
+  document.save();
+  res.status(200).json({ data: document });
+});
