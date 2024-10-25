@@ -10,10 +10,12 @@ const {
   getCarRepairsByGenCode,
   getRepairsReport,
   suggestNextCodeNumber,
+  updateRepair,
 } = require("../services/repairingService");
 router.route("/").post(createRepairing).get(getAllComRepairs);
 router.route("/:carNumber").get(getCarRepairsByNumber);
 router.route("/getById/:id").get(getCarRepairsByid);
+router.route("/update/:id").put(updateRepair);
 router.route("/gen/:generatedCode").get(getCarRepairsByGenCode);
 router.route("/report/:id").get(getRepairsReport);
 router.route("/nextCode/suggestNextCodeNumber").get(suggestNextCodeNumber);
