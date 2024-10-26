@@ -67,6 +67,7 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
         nextRepairDate: car.nextRepairDate,
         periodicRepairs: car.periodicRepairs,
         nonperiodicRepairs: car.nonPeriodicRepairs,
+        nextRepairDistance: car.nextRepairDistance,
       },
     });
   } catch (error) {

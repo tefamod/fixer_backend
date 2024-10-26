@@ -82,6 +82,9 @@ const carSchema = new mongoose.Schema({
   completedServicesRatio: {
     type: Number,
   },
+  nextRepairDistance: {
+    type: Number,
+  },
 });
 
 module.exports = mongoose.model("Car", carSchema);

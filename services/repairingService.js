@@ -33,6 +33,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     note1,
     note2,
     distance,
+    nextRepairDistance,
   } = req.body;
   if (req.body.manually == "True" || req.body.manually == true) {
     const id = req.body.id;
@@ -221,7 +222,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     await car_state.save();
     const car_ratio = await Car.findOneAndUpdate(
       { carNumber: carNumber },
-      { completedServicesRatio: completedServicesRatio },
+      { completedServicesRatio: completedServicesRatio, nextRepairDistance },
       { new: true }
     );
 
@@ -608,64 +609,81 @@ exports.getCarRepairsByid = asyncHandler(async (req, res, next) => {
   res.status(200).json({ data: sortedRepairs });
 });
 
-// @desc Search for car services by generated Code
+// @desc search for car services by generated Code with pagination
 // @Route GET /api/v1/repairing/gen/:generatedCode
-// @access private
+// @access Private
 exports.getCarRepairsByGenCode = asyncHandler(async (req, res, next) => {
   const { generatedCode } = req.params;
 
+  // Find the car by generated code
   const car = await Car.findOne({ generatedCode });
-
   if (!car) {
     return next(
       new apiError(
-        `Can't find car with this generated Code ${generatedCode}`,
+        `Can't find car with this generated Code: ${generatedCode}`,
         404
       )
     );
   }
 
-  const repairing = await Repairing.find({ carNumber: { $in: car.carNumber } });
+  // Set up pagination and other features for car repairs
+  const documentsCount = await Repairing.countDocuments({
+    carNumber: { $in: car.carNumber },
+  });
+  const apiFeatures = new ApiFeatures(
+    Repairing.find({ carNumber: { $in: car.carNumber } }),
+    req.query
+  )
+    .paginate(documentsCount)
+    .filter()
+    .search("Repairing") // Specify fields for search if needed
+    .limitFields();
 
-  if (!repairing || repairing.length === 0) {
-    return next(
-      new apiError(`Can't find services for this car ${generatedCode}`, 404)
-    );
-  }
-  sortedRepairs = repairing.sort(
+  const { mongooseQuery, paginationResult } = apiFeatures;
+  let repairs = await mongooseQuery;
+
+  // Sort repairs by creation date
+  repairs = repairs.sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
-  res.status(200).json({ data: repairing });
+
+  // Respond with paginated repair data
+  res.status(200).json({
+    results: repairs.length,
+    paginationResult,
+    data: repairs,
+  });
 });
 
-// @desc get the detiles for repair report
+// @desc Get details for repair report
 // @Route GET /api/v1/repairing/report/:id
-// @access private
+// @access Private
 exports.getRepairsReport = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
-  const Repair = await Repairing.findById(id);
-
-  if (!Repair) {
-    return next(new apiError(`Can't find car with this id ${id}`, 404));
+  // Find the repair record by ID
+  const repair = await Repairing.findById(id);
+  if (!repair) {
+    return next(new apiError(`Can't find car repair with this ID: ${id}`, 404));
   }
 
-  const carInfo = await Car.findOne({ carNumber: { $in: Repair.carNumber } });
-
+  // Find the associated car information
+  const carInfo = await Car.findOne({ carNumber: { $in: repair.carNumber } });
   if (!carInfo) {
     return next(
-      new apiError(`Can't find services for this car ${carInfo.carNumber}`, 404)
+      new apiError(`Can't find services for this car ${repair.carNumber}`, 404)
     );
   }
 
+  // Find the associated user information
   const userInfo = await User.findOne({ name: { $in: carInfo.ownerName } });
-
   if (!userInfo) {
     return next(
-      new apiError(`Can't car for this user ${carInfo.ownerName}`, 404)
+      new apiError(`Can't find car for this user ${carInfo.ownerName}`, 404)
     );
   }
 
+  // Combine information into a single object
   const info = {
     name: carInfo.ownerName,
     phone: userInfo.phoneNumber,
@@ -676,12 +694,35 @@ exports.getRepairsReport = asyncHandler(async (req, res, next) => {
     distances: carInfo.distances,
     model: carInfo.model,
     clientCode: carInfo.generatedCode,
-    note1: Repair.Note1,
-    note2: Repair.Note2,
+    note1: repair.Note1,
+    note2: repair.Note2,
   };
+
+  // Set up pagination and other features
+  const documentsCount = await Repairing.countDocuments();
+  const apiFeatures = new ApiFeatures(Repairing.find({}), req.query)
+    .paginate(documentsCount)
+    .filter()
+    .search("Repairing") // Adjust to model's relevant fields for search if needed
+    .limitFields();
+
+  const { mongooseQuery, paginationResult } = apiFeatures;
+  let documents = await mongooseQuery;
+
+  // Sort documents by creation date
+  documents = documents.sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
+
+  // Respond with paginated data and repair info
   res.status(200).json({
-    repair: Repair,
-    data: info,
+    results: documents.length,
+    paginationResult,
+    data: {
+      repair,
+      carInfo: info,
+      documents,
+    },
   });
 });
 
@@ -739,4 +780,23 @@ exports.suggestNextCodeNumber = asyncHandler(async (req, res, next) => {
 // @desc upadete repair car
 // @Route PUT /api/v1/repair/update/:id
 // @access private
-exports.updateRepair = factory.updateOne(Repairing);
+exports.updateRepair = asyncHandler(async (req, res, next) => {
+  const document = await Repairing.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+  });
+
+  if (!document) {
+    return next(new apiError(`No document for this id ${req.params.id}`, 404));
+  }
+  console.log(document.carNumber);
+  const car = await Car.findOneAndUpdate(
+    { carNumber: document.carNumber },
+    { nextRepairDistance: req.body.nextRepairDistance },
+    {
+      new: true,
+    }
+  );
+  car.save();
+  document.save();
+  res.status(200).json({ data: document });
+});
