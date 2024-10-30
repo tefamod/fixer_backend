@@ -113,6 +113,12 @@ const repairingSchema = new mongoose.Schema(
     distance: {
       type: Number,
     },
+    nextRepairDistance: {
+      type: Number,
+    },
+    nextRepairDate: {
+      type: Date,
+    },
   },
 
   // مفيده ليا لو عايز اجيب ال منتج الاحدث بالوقت
