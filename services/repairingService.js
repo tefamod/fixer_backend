@@ -255,6 +255,8 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
       Note1: note1,
       Note2: note2,
       distance,
+      nextRepairDistance,
+      nextRepairDate: nextPerDate,
     });
     if (!complete) {
       const car = await Car.findOneAndUpdate(
@@ -788,15 +790,20 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
   if (!document) {
     return next(new apiError(`No document for this id ${req.params.id}`, 404));
   }
-  console.log(document.carNumber);
-  const car = await Car.findOneAndUpdate(
-    { carNumber: document.carNumber },
-    { nextRepairDistance: req.body.nextRepairDistance },
-    {
-      new: true,
-    }
-  );
-  car.save();
+  if (!document.complete) {
+    console.log(document.complete);
+    const car = await Car.findOneAndUpdate(
+      { carNumber: document.carNumber },
+      {
+        nextRepairDistance: req.body.nextRepairDistance,
+        nextRepairDate: req.body.nextPerDate,
+      },
+      {
+        new: true,
+      }
+    );
+    car.save();
+  }
   document.save();
   res.status(200).json({ data: document });
 });
