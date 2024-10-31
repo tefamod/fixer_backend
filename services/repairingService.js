@@ -657,35 +657,34 @@ exports.getCarRepairsByGenCode = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc Get details for repair report
+// @desc get the detiles for repair report
 // @Route GET /api/v1/repairing/report/:id
-// @access Private
+// @access private
 exports.getRepairsReport = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
-  // Find the repair record by ID
-  const repair = await Repairing.findById(id);
-  if (!repair) {
-    return next(new apiError(`Can't find car repair with this ID: ${id}`, 404));
+  const Repair = await Repairing.findById(id);
+
+  if (!Repair) {
+    return next(new apiError(`Can't find car with this id ${id}`, 404));
   }
 
-  // Find the associated car information
-  const carInfo = await Car.findOne({ carNumber: { $in: repair.carNumber } });
+  const carInfo = await Car.findOne({ carNumber: { $in: Repair.carNumber } });
+
   if (!carInfo) {
     return next(
-      new apiError(`Can't find services for this car ${repair.carNumber}`, 404)
+      new apiError(`Can't find services for this car ${carInfo.carNumber}`, 404)
     );
   }
 
-  // Find the associated user information
   const userInfo = await User.findOne({ name: { $in: carInfo.ownerName } });
+
   if (!userInfo) {
     return next(
-      new apiError(`Can't find car for this user ${carInfo.ownerName}`, 404)
+      new apiError(`Can't car for this user ${carInfo.ownerName}`, 404)
     );
   }
 
-  // Combine information into a single object
   const info = {
     name: carInfo.ownerName,
     phone: userInfo.phoneNumber,
@@ -696,16 +695,14 @@ exports.getRepairsReport = asyncHandler(async (req, res, next) => {
     distances: carInfo.distances,
     model: carInfo.model,
     clientCode: carInfo.generatedCode,
-    note1: repair.Note1,
-    note2: repair.Note2,
+    note1: Repair.Note1,
+    note2: Repair.Note2,
   };
-
-  // Respond with paginated data and repair info
   res.status(200).json({
+    repair: Repair,
     data: info,
   });
 });
-
 exports.suggestNextCodeNumber = asyncHandler(async (req, res, next) => {
   const const_part_of_id = "2021";
   let newId = null;
