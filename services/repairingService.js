@@ -700,31 +700,9 @@ exports.getRepairsReport = asyncHandler(async (req, res, next) => {
     note2: repair.Note2,
   };
 
-  // Set up pagination and other features
-  const documentsCount = await Repairing.countDocuments();
-  const apiFeatures = new ApiFeatures(Repairing.find({}), req.query)
-    .paginate(documentsCount)
-    .filter()
-    .search("Repairing") // Adjust to model's relevant fields for search if needed
-    .limitFields();
-
-  const { mongooseQuery, paginationResult } = apiFeatures;
-  let documents = await mongooseQuery;
-
-  // Sort documents by creation date
-  documents = documents.sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-  );
-
   // Respond with paginated data and repair info
   res.status(200).json({
-    results: documents.length,
-    paginationResult,
-    data: {
-      repair,
-      carInfo: info,
-      documents,
-    },
+    data: info,
   });
 });
 
