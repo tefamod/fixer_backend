@@ -105,176 +105,171 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     );
   }
 
-  try {
-    const repairDetails = [];
+  const repairDetails = [];
 
-    for (const { price, state } of services) {
-      totalPrice += price;
-      totalServicesCount++;
-      if (state === "completed") {
-        completedServices++;
-      }
+  for (const { price, state } of services) {
+    totalPrice += price;
+    totalServicesCount++;
+    if (state === "completed") {
+      completedServices++;
     }
+  }
 
-    for (const { price } of additions) {
-      totalPrice += price;
+  for (const { price } of additions) {
+    totalPrice += price;
+  }
+
+  for (const { id, quantity } of components) {
+    const inventoryComponent = await Inventory.findById(id);
+
+    if (!inventoryComponent) {
+      return next(
+        new apiError(`Component with ID ${id} not found in inventory`, 404)
+      );
     }
-
-    for (const { id, quantity } of components) {
-      const inventoryComponent = await Inventory.findById(id);
-
-      if (!inventoryComponent) {
-        return next(
-          new apiError(`Component with ID ${id} not found in inventory`, 404)
-        );
-      }
-      if (
-        inventoryComponent.quantity < quantity ||
-        inventoryComponent.quantity < 0
-      ) {
-        return next(
-          new apiError(`Not enough quantity for component with id ${id}`, 400)
-        );
-      }
-      inventoryComponent.quantity -= quantity;
-
-      await inventoryComponent.save();
-
-      const componentPrice = inventoryComponent.price * quantity;
-      totalPrice += componentPrice;
-
-      repairDetails.push({
-        name: inventoryComponent.name,
-        quantity: quantity,
-        price: componentPrice,
-      });
+    if (
+      inventoryComponent.quantity < quantity ||
+      inventoryComponent.quantity < 0
+    ) {
+      return next(
+        new apiError(`Not enough quantity for component with id ${id}`, 400)
+      );
     }
-    /*if (type == "periodic") {
+    inventoryComponent.quantity -= quantity;
+
+    await inventoryComponent.save();
+
+    const componentPrice = inventoryComponent.price * quantity;
+    totalPrice += componentPrice;
+
+    repairDetails.push({
+      name: inventoryComponent.name,
+      quantity: quantity,
+      price: componentPrice,
+    });
+  }
+  /*if (type == "periodic") {
       periodicRepairs += 1;
     } else {
       nonperiodicRepairs += 1;
     }*/
 
-    const reCar = await Car.findOne({ carNumber: carNumber });
-    if (!reCar) {
-      return next(new apiError(`No car for this number ${carNumber}`, 404));
-    }
-    periodicRepairs = reCar.periodicRepairs;
-    nonperiodicRepairs = reCar.nonPeriodicRepairs;
-    if (type == "periodic" || type == "nonPeriodic") {
-      if (type == "periodic") {
-        periodicRepairs += 1;
-      } else {
-        nonperiodicRepairs += 1;
-      }
-    } else {
-      return next(
-        new apiError(`the type must be periodic or nonPeriodic only`, 400)
-      );
-    }
-    reCar.periodicRepairs = periodicRepairs;
-    reCar.nonPeriodicRepairs = nonperiodicRepairs;
-    reCar.distances = distance;
-
-    reCar.save();
-    const currentDate = new Date();
-    const parsedNextPerDate = new Date(nextPerDate);
-    if (completedServices === totalServicesCount) {
-      complete = true;
-      const lastRepairDate = new Date();
-      const car = await Car.findOneAndUpdate(
-        { carNumber: carNumber },
-        {
-          lastRepairDate: lastRepairDate,
-          nextRepairDate: nextPerDate,
-          repairing: !complete,
-        },
-        { new: true }
-      );
-
-      if (!car) {
-        return next(new apiError(`No car for this number ${carNumber}`, 404));
-      }
-    }
-
-    const completedServicesRatio =
-      totalServicesCount > 0 ? completedServices / totalServicesCount : 0;
-    const priceAfterDiscount = totalPrice - discount;
-
-    let state = "";
-
-    if (!complete) {
-      state = "Repair";
-    } else if (currentDate < parsedNextPerDate && complete) {
-      state = "Good";
-    } else {
-      state = "Need to check";
-    }
-    const car_state = await Car.findOneAndUpdate(
-      { carNumber: carNumber },
-      { State: state },
-      { new: true }
-    );
-
-    if (!car_state) {
-      return next(new apiError(`No car for this number ${carNumber}`, 404));
-    }
-    await car_state.save();
-    const car_ratio = await Car.findOneAndUpdate(
-      { carNumber: carNumber },
-      { completedServicesRatio: completedServicesRatio, nextRepairDistance },
-      { new: true }
-    );
-
-    if (!car_ratio) {
-      return next(new apiError(`No car for this number ${carNumber}`, 404));
-    }
-    await car_ratio.save();
-    const expectedDate = new Date();
-    expectedDate.setDate(expectedDate.getDate() + parseInt(daysItTake));
-
-    const car = await Car.findOne({ carNumber });
-    const repair = await Repairing.create({
-      client: car.ownerName,
-      genId: newId,
-      brand: car.brand,
-      category: car.category,
-      model: car.model,
-      component: repairDetails,
-      Services: services,
-      additions,
-      carNumber,
-      type,
-      totalPrice,
-      discount,
-      priceAfterDiscount,
-      expectedDate,
-      complete,
-      completedServicesRatio,
-      state,
-      Note1: note1,
-      Note2: note2,
-      distance,
-      nextRepairDistance,
-      nextRepairDate: nextPerDate,
-    });
-    if (!complete) {
-      const car = await Car.findOneAndUpdate(
-        { carNumber: carNumber },
-        { repairing_id: repair._id, repairing: true },
-        { new: true }
-      );
-
-      if (!car) {
-        return next(new apiError(`No car for this number ${carNumber}`, 404));
-      }
-      await car.save();
-    }
-    res.status(200).json();
-  } catch (error) {
-    console.error("Error:", error);
-    next(new apiError("Internal Server Error", 500));
+  const reCar = await Car.findOne({ carNumber: carNumber });
+  if (!reCar) {
+    return next(new apiError(`No car for this number ${carNumber}`, 404));
   }
+  periodicRepairs = reCar.periodicRepairs;
+  nonperiodicRepairs = reCar.nonPeriodicRepairs;
+  if (type == "periodic" || type == "nonPeriodic") {
+    if (type == "periodic") {
+      periodicRepairs += 1;
+    } else {
+      nonperiodicRepairs += 1;
+    }
+  } else {
+    return next(
+      new apiError(`the type must be periodic or nonPeriodic only`, 400)
+    );
+  }
+  reCar.periodicRepairs = periodicRepairs;
+  reCar.nonPeriodicRepairs = nonperiodicRepairs;
+  reCar.distances = distance;
+
+  reCar.save();
+  const currentDate = new Date();
+  const parsedNextPerDate = new Date(nextPerDate);
+  if (completedServices === totalServicesCount) {
+    complete = true;
+    const lastRepairDate = new Date();
+    const car = await Car.findOneAndUpdate(
+      { carNumber: carNumber },
+      {
+        lastRepairDate: lastRepairDate,
+        nextRepairDate: nextPerDate,
+        repairing: !complete,
+      },
+      { new: true }
+    );
+
+    if (!car) {
+      return next(new apiError(`No car for this number ${carNumber}`, 404));
+    }
+  }
+
+  const completedServicesRatio =
+    totalServicesCount > 0 ? completedServices / totalServicesCount : 0;
+  const priceAfterDiscount = totalPrice - discount;
+
+  let state = "";
+
+  if (!complete) {
+    state = "Repair";
+  } else if (currentDate < parsedNextPerDate && complete) {
+    state = "Good";
+  } else {
+    state = "Need to check";
+  }
+  const car_state = await Car.findOneAndUpdate(
+    { carNumber: carNumber },
+    { State: state },
+    { new: true }
+  );
+
+  if (!car_state) {
+    return next(new apiError(`No car for this number ${carNumber}`, 404));
+  }
+  await car_state.save();
+  const car_ratio = await Car.findOneAndUpdate(
+    { carNumber: carNumber },
+    { completedServicesRatio: completedServicesRatio, nextRepairDistance },
+    { new: true }
+  );
+
+  if (!car_ratio) {
+    return next(new apiError(`No car for this number ${carNumber}`, 404));
+  }
+  await car_ratio.save();
+  const expectedDate = new Date();
+  expectedDate.setDate(expectedDate.getDate() + parseInt(daysItTake));
+
+  const car = await Car.findOne({ carNumber });
+  const repair = await Repairing.create({
+    client: car.ownerName,
+    genId: newId,
+    brand: car.brand,
+    category: car.category,
+    model: car.model,
+    component: repairDetails,
+    Services: services,
+    additions,
+    carNumber,
+    type,
+    totalPrice,
+    discount,
+    priceAfterDiscount,
+    expectedDate,
+    complete,
+    completedServicesRatio,
+    state,
+    Note1: note1,
+    Note2: note2,
+    distance,
+    nextRepairDistance,
+    nextRepairDate: nextPerDate,
+  });
+  if (!complete) {
+    const car = await Car.findOneAndUpdate(
+      { carNumber: carNumber },
+      { repairing_id: repair._id, repairing: true },
+      { new: true }
+    );
+
+    if (!car) {
+      return next(new apiError(`No car for this number ${carNumber}`, 404));
+    }
+    await car.save();
+  }
+  res.status(200).json();
 });
 
 // @desc Update inventory and save services
