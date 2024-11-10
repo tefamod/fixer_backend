@@ -211,6 +211,10 @@ exports.createUser = asyncHandler(async (req, res, next) => {
     generatedCode: newCarCode,
     distances: req.body.distances,
     motorNumber: req.body.motorNumber,
+    nextRepairDate: req.body.nextRepairDate,
+    lastRepairDate: req.body.lastRepairDate,
+    periodicRepairs: req.body.periodicRepairs,
+    nonPeriodicRepairs: req.body.nonPeriodicRepairs,
   });
   const user = await User.create({
     name: req.body.name,
