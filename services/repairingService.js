@@ -30,8 +30,8 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     discount,
     daysItTake,
     nextPerDate,
-    note1,
-    note2,
+    Note1,
+    Note2,
     distance,
     nextRepairDistance,
   } = req.body;
@@ -251,8 +251,8 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     complete,
     completedServicesRatio,
     state,
-    Note1: note1,
-    Note2: note2,
+    Note1,
+    Note2,
     distance,
     nextRepairDistance,
     nextRepairDate: nextPerDate,
@@ -761,7 +761,6 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     return next(new apiError(`No document for this id ${req.params.id}`, 404));
   }
   if (!document.complete) {
-    console.log(document.complete);
     const car = await Car.findOneAndUpdate(
       { carNumber: document.carNumber },
       {
