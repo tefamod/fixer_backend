@@ -7,6 +7,7 @@ const factory = require("./handlersFactory");
 const apiError = require("../utils/apiError");
 const ApiFeatures = require("../utils/apiFeatures");
 const asyncHandler = require("express-async-handler");
+const { body } = require("express-validator");
 
 // @desc create a repairing
 // @Route POST /api/v1/repairing
@@ -250,7 +251,6 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     expectedDate,
     complete,
     completedServicesRatio,
-    state,
     Note1,
     Note2,
     distance,
@@ -753,26 +753,192 @@ exports.suggestNextCodeNumber = asyncHandler(async (req, res, next) => {
 // @Route PUT /api/v1/repair/update/:id
 // @access private
 exports.updateRepair = asyncHandler(async (req, res, next) => {
-  const document = await Repairing.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-  });
+  const repair = await Repairing.findById(req.params.id);
 
-  if (!document) {
-    return next(new apiError(`No document for this id ${req.params.id}`, 404));
+  if (!repair) {
+    return next(new apiError(`No repair for this ID: ${req.params.id}`, 404));
   }
-  if (!document.complete) {
-    const car = await Car.findOneAndUpdate(
-      { carNumber: document.carNumber },
+  let totalPrice = repair.priceAfterDiscount || 0;
+  let updateTotalPrice = 0;
+  let newComplete = false;
+
+  if (req.body.components) {
+    for (const { id, quantity } of req.body.components) {
+      const inventoryComponent = await Inventory.findById(id);
+
+      if (!inventoryComponent) {
+        return next(
+          new apiError(`Component with ID ${id} not found in inventory`, 404)
+        );
+      }
+
+      if (
+        inventoryComponent.quantity < quantity ||
+        inventoryComponent.quantity < 0
+      ) {
+        return next(
+          new apiError(`Not enough quantity for component with ID ${id}`, 400)
+        );
+      }
+
+      inventoryComponent.quantity -= quantity;
+      await inventoryComponent.save();
+
+      const componentPrice = inventoryComponent.price * quantity;
+      updateTotalPrice += componentPrice;
+
+      repair.component.push({
+        name: inventoryComponent.name,
+        quantity: quantity,
+        price: componentPrice,
+      });
+    }
+
+    totalPrice = totalPrice + updateTotalPrice;
+    updateTotalPrice = 0;
+  }
+
+  if (req.body.services) {
+    let totalServicesCount = repair.Services.length;
+    let completedServices = repair.Services.filter(
+      (service) => service.state === "completed"
+    ).length;
+
+    for (const { price, state } of req.body.services) {
+      updateTotalPrice = updateTotalPrice + price;
+
+      totalServicesCount++;
+      if (state === "completed") {
+        completedServices++;
+      }
+    }
+    const completedServicesRatio =
+      totalServicesCount > 0 ? completedServices / totalServicesCount : 0;
+    newComplete = completedServices === totalServicesCount;
+    const currentDate = new Date();
+    let state = "";
+
+    if (!newComplete) {
+      state = "Repair";
+    } else if (currentDate < repair.nextRepairDate && newComplete) {
+      state = "Good";
+    } else {
+      state = "Need to check";
+    }
+    const car_state = await Car.findOneAndUpdate(
+      { carNumber: repair.carNumber },
+      { State: state },
+      { new: true }
+    );
+
+    if (!car_state) {
+      return next(
+        new apiError(`No car for this number ${repair.carNumber}`, 404)
+      );
+    }
+
+    repair.Services = repair.Services.concat(req.body.services);
+    repair.complete = newComplete;
+    repair.completedServicesRatio = completedServicesRatio;
+    totalPrice = totalPrice + updateTotalPrice;
+    updateTotalPrice = 0;
+  }
+
+  if (req.body.additions) {
+    for (const { price } of req.body.additions) {
+      if (price) {
+        updateTotalPrice += Number(price);
+      }
+    }
+    repair.additions = repair.additions.concat(req.body.additions);
+    totalPrice = totalPrice + updateTotalPrice;
+    updateTotalPrice = 0;
+  }
+
+  if (req.body.discount) {
+    const discountValue = Number(req.body.discount) || 0;
+
+    totalPrice = totalPrice - discountValue;
+    repair.discount = (repair.discount || 0) + discountValue;
+  }
+  if (req.body.type) {
+    let periodicRepairs = 0;
+    let nonperiodicRepairs = 0;
+    const reCar = await Car.findOne({ carNumber: repair.carNumber });
+    if (!reCar) {
+      return next(new apiError(`No car for this number ${carNumber}`, 404));
+    }
+    periodicRepairs = reCar.periodicRepairs;
+    nonperiodicRepairs = reCar.nonPeriodicRepairs;
+    if (req.body.type == "periodic" || req.body.type == "nonPeriodic") {
+      if (req.body.type == "periodic") {
+        periodicRepairs += 1;
+        if (repair.type == "nonPeriodic") {
+          nonperiodicRepairs -= 1;
+        }
+      } else {
+        nonperiodicRepairs += 1;
+        if (repair.type == "periodic") {
+          periodicRepairs -= 1;
+        }
+      }
+    } else {
+      return next(
+        new apiError(`the type must be periodic or nonPeriodic only`, 400)
+      );
+    }
+    reCar.periodicRepairs = periodicRepairs;
+    reCar.nonPeriodicRepairs = nonperiodicRepairs;
+
+    reCar.save();
+    repair.type = req.body.type;
+  }
+
+  if (repair.complete && req.body.nextPerDate) {
+    await Car.findOneAndUpdate(
+      { carNumber: repair.carNumber },
       {
-        nextRepairDistance: req.body.nextRepairDistance,
+        lastRepairDate: new Date(),
         nextRepairDate: req.body.nextPerDate,
       },
-      {
-        new: true,
-      }
+      { new: true }
     );
-    car.save();
+    repair.nextRepairDate = req.body.nextPerDate;
   }
-  document.save();
-  res.status(200).json({ data: document });
+
+  if (!repair.complete && req.body.nextRepairDistance) {
+    await Car.findOneAndUpdate(
+      { carNumber: repair.carNumber },
+      { nextRepairDistance: req.body.nextRepairDistance },
+      { new: true }
+    );
+    repair.nextRepairDistance = req.body.nextRepairDistance;
+  }
+
+  if (req.body.Note1 || req.body.Note2 || req.body.distance) {
+    repair.Note1 = req.body.Note1;
+    repair.Note2 = req.body.Note2;
+    repair.distance = req.body.distance;
+  }
+  repair.priceAfterDiscount = totalPrice;
+  await repair.save();
+
+  res.status(200).json({ data: repair });
 });
+
+/*
+
+    component: repairDetails ++,
+    Services: services ++,
+    additions ++,
+    type ++,
+    discount ++,
+    expectedDate ,
+    complete ++,
+    completedServicesRatio ++,
+    Note1 ++,
+    Note2 ++,
+    distance ++,
+    nextRepairDistance ++,
+    nextRepairDate: nextPerDate ++,
+*/
