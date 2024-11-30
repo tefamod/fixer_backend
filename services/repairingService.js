@@ -929,4 +929,39 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     nextRepairDistance ++,
     nextRepairDate: nextPerDate ++,
 */
-exports.deleteRepair = factory.deleteOne(Repairing);
+exports.deleteRepair = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  // Find repair by ID
+  const repair = await Repairing.findById(id);
+  if (!repair) {
+    new apiError(`there is no repair with this id ${id}`, 404);
+  }
+
+  // Check if components array is not empty
+  if (repair.component && repair.component.length > 0) {
+    for (const component of repair.component) {
+      const { componentId, quantity } = component;
+
+      const inventoryItem = await Inventory.findOne({ componentId });
+      if (inventoryItem) {
+        inventoryItem.quantity += quantity;
+        await inventoryItem.save();
+      } else {
+        new apiError(`there is no component with this id ${componentId}`, 404);
+      }
+    }
+  }
+
+  if (repair.complete) {
+    const car = await Car.findOne({ repairing_id: id });
+    if (car) {
+      car.repairing_id = null;
+      await car.save();
+    }
+  }
+  await repair.deleteOne();
+  console.log(`Repair document with ID ${id} successfully deleted.`);
+
+  res.status(200).json({ message: "deleted successfully" });
+});
