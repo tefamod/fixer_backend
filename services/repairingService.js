@@ -404,121 +404,87 @@ exports.getCarRepairsByNumber = asyncHandler(async (req, res, next) => {
 // @Route PUT /api/v1/repairing/:serviceId
 // @access private
 exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
-  let totalServicesCount = 0;
-  let completedServices = 0;
-  let currentDate = 0;
-  let lastRepairDate = 0;
-  let parsedNextPerDate = 0;
   const { serviceId } = req.params;
   const { newState } = req.body;
 
-  try {
-    const repairingDoc = await Repairing.findOne({ "Services._id": serviceId });
+  const repairingDoc = await Repairing.findOne({ "Services._id": serviceId });
 
-    if (!repairingDoc) {
-      return next(
-        new apiError(
-          `Service with ID ${serviceId} not found in any repairing document`,
-          404
-        )
-      );
-    }
-
-    const service = repairingDoc.Services.find((s) => s._id.equals(serviceId));
-
-    if (!service) {
-      return next(
-        new apiError(
-          `Service with ID ${serviceId} not found within any repairing document`,
-          404
-        )
-      );
-    }
-
-    service.state = newState;
-    for (const { state } of repairingDoc.Services) {
-      totalServicesCount++;
-      if (state === "completed") {
-        completedServices++;
-      }
-    }
-
-    if (completedServices === totalServicesCount) {
-      repairingDoc.complete = true;
-      currentDate = new Date();
-      lastRepairDate = new Date();
-      const car = await Car.findOneAndUpdate(
-        { carNumber: repairingDoc.carNumber },
-        {
-          lastRepairDate: lastRepairDate,
-        },
-        { new: true }
-      );
-
-      parsedNextPerDate = car.nextRepairDate;
-      if (!car) {
-        return next(
-          new apiError(`No car for this number ${repairingDoc.carNumber}`, 404)
-        );
-      }
-    } else {
-      repairingDoc.complete = false;
-    }
-
-    repairingDoc.completedServicesRatio =
-      totalServicesCount > 0 ? completedServices / totalServicesCount : 0;
-
-    let state = "";
-
-    if (!repairingDoc.complete) {
-      state = "Repair";
-      const car = await Car.findOneAndUpdate(
-        { carNumber: repairingDoc.carNumber },
-        { repairing_id: repairingDoc._id, repairing: true },
-        { new: true }
-      );
-    } else if (currentDate < parsedNextPerDate && repairingDoc.complete) {
-      state = "Good";
-    } else {
-      state = "Need to check";
-    }
-
-    const car_state = await Car.findOneAndUpdate(
-      { carNumber: repairingDoc.carNumber },
-      { State: state },
-      { new: true }
+  if (!repairingDoc) {
+    return next(
+      new apiError(
+        `Service with ID ${serviceId} not found in any repairing document`,
+        404
+      )
     );
-
-    if (!car_state) {
-      return next(
-        new apiError(`No car for this number ${repairingDoc.carNumber}`, 404)
-      );
-    }
-    await car_state.save();
-    const car_ratio = await Car.findOneAndUpdate(
-      { carNumber: repairingDoc.carNumber },
-      { completedServicesRatio: repairingDoc.completedServicesRatio },
-      { new: true }
-    );
-
-    if (!car_ratio) {
-      return next(
-        new apiError(`No car for this number ${repairingDoc.carNumber}`, 404)
-      );
-    }
-
-    await service.save();
-    await car_ratio.save();
-
-    await repairingDoc.save();
-
-    res
-      .status(200)
-      .json({ data: service, message: `Service state updated to ${newState}` });
-  } catch (error) {
-    console.error("Error:", error);
-    next(new apiError("Internal Server Error", 500));
   }
+
+  const service = repairingDoc.Services.find((s) => s._id.equals(serviceId));
+
+  if (!service) {
+    return next(
+      new apiError(
+        `Service with ID ${serviceId} not found within any repairing document`,
+        404
+      )
+    );
+  }
+
+  // Update service state
+  service.state = newState;
+
+  // Update completed services count and ratio
+  const totalServicesCount = repairingDoc.Services.length;
+  const completedServices = repairingDoc.Services.filter(
+    (s) => s.state === "completed"
+  ).length;
+
+  repairingDoc.completedServicesRatio =
+    totalServicesCount > 0 ? completedServices / totalServicesCount : 0;
+
+  // Update repair completion status
+  repairingDoc.complete = completedServices === totalServicesCount;
+
+  // Save the parent document (repairingDoc) to persist subdocument changes
+  await repairingDoc.save();
+
+  // Update car data if all services are completed
+  let car = await Car.findOne({ carNumber: repairingDoc.carNumber });
+
+  if (!car) {
+    return next(
+      new apiError(`No car found for number ${repairingDoc.carNumber}`, 404)
+    );
+  }
+
+  if (repairingDoc.complete) {
+    const currentDate = new Date();
+    car.lastRepairDate = currentDate;
+
+    if (car.nextRepairDate) {
+      const parsedNextPerDate = new Date(car.nextRepairDate);
+      if (currentDate < parsedNextPerDate) {
+        car.State = "Good";
+      } else {
+        car.State = "Need to check";
+      }
+    } else {
+      car.State = "Good";
+    }
+  } else {
+    car.State = "Repair";
+    car.repairing = true;
+    car.repairing_id = repairingDoc._id;
+  }
+
+  car.completedServicesRatio = repairingDoc.completedServicesRatio;
+
+  // Save the car document
+  await car.save();
+
+  res.status(200).json({
+    data: service,
+    message: `Service state updated to ${newState}`,
+  });
 });
 
 // @desc get all completed repairs
@@ -761,7 +727,28 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
   let totalPrice = repair.priceAfterDiscount || 0;
   let updateTotalPrice = 0;
   let newComplete = false;
+  if (req.body.genId) {
+    if (!/^2021\d*$/.test(req.body.genId)) {
+      return next(
+        new apiError(
+          "genId must start with '2021' and contain only numbers",
+          400
+        )
+      );
+    }
 
+    const existingRepair = await Repairing.findOne({ genId: req.body.genId });
+    if (existingRepair) {
+      return next(
+        new apiError(
+          `Repair with genId '${req.body.genId}' already exists`,
+          400
+        )
+      );
+    }
+
+    repair.genId = req.body.genId;
+  }
   if (req.body.components) {
     for (const { id, quantity } of req.body.components) {
       const inventoryComponent = await Inventory.findById(id);
@@ -942,3 +929,4 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     nextRepairDistance ++,
     nextRepairDate: nextPerDate ++,
 */
+exports.deleteRepair = factory.deleteOne(Repairing);

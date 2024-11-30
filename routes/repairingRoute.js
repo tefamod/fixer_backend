@@ -11,6 +11,7 @@ const {
   getRepairsReport,
   suggestNextCodeNumber,
   updateRepair,
+  deleteRepair,
 } = require("../services/repairingService");
 router.route("/").post(createRepairing).get(getAllComRepairs);
 router.route("/:carNumber").get(getCarRepairsByNumber);
@@ -20,5 +21,6 @@ router.route("/gen/:generatedCode").get(getCarRepairsByGenCode);
 router.route("/report/:id").get(getRepairsReport);
 router.route("/nextCode/suggestNextCodeNumber").get(suggestNextCodeNumber);
 router.route("/:serviceId").put(updateServiceStateById);
+router.route("/delete/:id").delete(deleteRepair);
 
 module.exports = router;
