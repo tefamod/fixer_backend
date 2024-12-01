@@ -724,9 +724,12 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
   if (!repair) {
     return next(new apiError(`No repair for this ID: ${req.params.id}`, 404));
   }
-  let totalPrice = repair.priceAfterDiscount || 0;
+  let priceAfterDiscount = repair.priceAfterDiscount || 0;
+  let totalPrice = repair.totalPrice || 0;
   let updateTotalPrice = 0;
   let newComplete = false;
+  let diffQuantity = 0;
+  let diffPrice = 0;
   if (req.body.genId) {
     if (!/^2021\d*$/.test(req.body.genId)) {
       return next(
@@ -749,39 +752,122 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
 
     repair.genId = req.body.genId;
   }
-  if (req.body.components) {
-    for (const { id, quantity } of req.body.components) {
-      const inventoryComponent = await Inventory.findById(id);
-
-      if (!inventoryComponent) {
-        return next(
-          new apiError(`Component with ID ${id} not found in inventory`, 404)
-        );
-      }
-
-      if (
-        inventoryComponent.quantity < quantity ||
-        inventoryComponent.quantity < 0
-      ) {
-        return next(
-          new apiError(`Not enough quantity for component with ID ${id}`, 400)
-        );
-      }
-
-      inventoryComponent.quantity -= quantity;
-      await inventoryComponent.save();
-
-      const componentPrice = inventoryComponent.price * quantity;
-      updateTotalPrice += componentPrice;
-
-      repair.component.push({
-        name: inventoryComponent.name,
-        quantity: quantity,
-        price: componentPrice,
+  if (req.body.components && req.body.components.length > 0) {
+    for (const { id: componentId, quantity } of req.body.components) {
+      //search in the repair components
+      const repairComponent = repair.component.find(
+        (comp) => comp._id.toString() === componentId
+      );
+      const inventory = await Inventory.findOne({
+        name: repairComponent.name,
       });
-    }
+      if (repairComponent) {
+        if (quantity === 0) {
 
+          if (inventory) {
+            inventory.quantity += repairComponent.quantity;
+            diffPrice = inventory.price * repairComponent.quantity;
+            updateTotalPrice -= diffPrice;
+            await inventory.save();
+          } else {
+            return next(
+              new apiError(
+                `Component with name ${repairComponent.name} not found in inventory`,
+                404
+              )
+            );
+          }
+          //remove the component from the repair
+          repair.component = repair.component.filter(
+            (comp) => comp._id.toString() !== componentId
+          );
+        } else {
+          if (repairComponent.quantity < quantity) {
+            diffQuantity = quantity - repairComponent.quantity;
+
+            if (inventory) {
+              inventory.quantity -= diffQuantity;
+              diffPrice = inventory.price * diffQuantity;
+              updateTotalPrice += diffPrice;
+              repairComponent.price += diffPrice;
+            } else {
+              return next(
+                new apiError(
+                  `Component with name ${repairComponent.name} not found in inventory`,
+                  404
+                )
+              );
+            }
+            repairComponent.quantity = quantity;
+          } else if (repairComponent.quantity > quantity) {
+            diffQuantity = repairComponent.quantity - quantity;
+
+            if (inventory) {
+              inventory.quantity += diffQuantity;
+              diffPrice = inventory.price * diffQuantity;
+              updateTotalPrice -= diffPrice;
+              repairComponent.price -= diffPrice;
+            } else {
+              return next(
+                new apiError(
+                  `Component with name ${repairComponent.name} not found in inventory`,
+                  404
+                )
+              );
+            }
+            repairComponent.quantity = quantity;
+          } else {
+            repairComponent.quantity = quantity;
+          }
+        }
+        await inventory.save();
+        await repairComponent.save();
+      } else {
+        const inventoryComponent = await Inventory.findById(componentId);
+
+        if (!inventoryComponent) {
+          return next(
+            new apiError(
+              `Component with ID ${componentId} not found in inventory`,
+              404
+            )
+          );
+        }
+        if (inventoryComponent) {
+          if (quantity === 0) {
+            return next(
+              new apiError(
+                `in the add operation the quantity must be greater than zero`,
+                404
+              )
+            );
+          }
+        }
+
+        if (
+          inventoryComponent.quantity < quantity ||
+          inventoryComponent.quantity < 0
+        ) {
+          return next(
+            new apiError(`Not enough quantity for component with ID ${id}`, 400)
+          );
+        }
+
+        inventoryComponent.quantity -= quantity;
+        await inventoryComponent.save();
+
+        const componentPrice = inventoryComponent.price * quantity;
+        updateTotalPrice += componentPrice;
+
+        repair.component.push({
+          name: inventoryComponent.name,
+          quantity: quantity,
+          price: componentPrice,
+        });
+      }
+    }
     totalPrice = totalPrice + updateTotalPrice;
+    priceAfterDiscount = priceAfterDiscount + updateTotalPrice;
     updateTotalPrice = 0;
   }
 
@@ -828,6 +914,7 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     repair.complete = newComplete;
     repair.completedServicesRatio = completedServicesRatio;
     totalPrice = totalPrice + updateTotalPrice;
+    priceAfterDiscount = priceAfterDiscount + updateTotalPrice;
     updateTotalPrice = 0;
   }
 
@@ -839,13 +926,13 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     }
     repair.additions = repair.additions.concat(req.body.additions);
     totalPrice = totalPrice + updateTotalPrice;
+    priceAfterDiscount = priceAfterDiscount + updateTotalPrice;
     updateTotalPrice = 0;
   }
 
   if (req.body.discount) {
     const discountValue = Number(req.body.discount) || 0;
-
-    totalPrice = totalPrice - discountValue;
+    priceAfterDiscount = priceAfterDiscount - discountValue;
     repair.discount = (repair.discount || 0) + discountValue;
   }
   if (req.body.type) {
@@ -907,7 +994,9 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     repair.Note2 = req.body.Note2;
     repair.distance = req.body.distance;
   }
-  repair.priceAfterDiscount = totalPrice;
+  repair.totalPrice = totalPrice;
+  repair.priceAfterDiscount = priceAfterDiscount;
+
   await repair.save();
 
   res.status(200).json({ data: repair });
@@ -965,3 +1054,5 @@ exports.deleteRepair = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ message: "deleted successfully" });
 });
+
+
