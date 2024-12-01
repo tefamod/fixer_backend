@@ -85,9 +85,7 @@ const repairingSchema = new mongoose.Schema(
         },
       },
     ],
-    totalPrice: {
-      type: String,
-    },
+
     discount: {
       type: Number,
     },
