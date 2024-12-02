@@ -763,7 +763,6 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
       });
       if (repairComponent) {
         if (quantity === 0) {
-
           if (inventory) {
             inventory.quantity += repairComponent.quantity;
             diffPrice = inventory.price * repairComponent.quantity;
@@ -868,66 +867,144 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     }
     totalPrice = totalPrice + updateTotalPrice;
     priceAfterDiscount = priceAfterDiscount + updateTotalPrice;
+    diffPrice = 0;
     updateTotalPrice = 0;
   }
 
-  if (req.body.services) {
-    let totalServicesCount = repair.Services.length;
-    let completedServices = repair.Services.filter(
-      (service) => service.state === "completed"
-    ).length;
+  if (req.body.services && req.body.services.length > 0) {
+    for (const { id: serviceId, name, price, remove } of req.body.services) {
+      if (serviceId) {
+        const repairService = repair.Services.find(
+          (comp) => comp._id.toString() === serviceId
+        );
+        if (repairService) {
+          if (remove) {
+            updateTotalPrice -= repairService.price;
+            repair.Services = repair.Services.filter(
+              (comp) => comp._id.toString() !== serviceId
+            );
+          } else {
+            if (name) {
+              repairService.name = name;
+            }
+            if (price) {
+              if (repairService.price > price) {
+                diffPrice = repairService.price - price;
+                updateTotalPrice -= diffPrice;
+              } else if (repairService.price < price) {
+                diffPrice = price - repairService.price;
+                updateTotalPrice += diffPrice;
+              }
+              repairService.price = price;
+            }
+          }
+          await repairService.save();
+        } else {
+          return next(
+            new apiError(
+              `Service with id ${serviceId} not found in the repair`,
+              404
+            )
+          );
+        }
+      } else {
+        let totalServicesCount = repair.Services.length;
+        let completedServices = repair.Services.filter(
+          (service) => service.state === "completed"
+        ).length;
 
-    for (const { price, state } of req.body.services) {
-      updateTotalPrice = updateTotalPrice + price;
+        for (const { price, state } of req.body.services) {
+          updateTotalPrice = updateTotalPrice + price;
 
-      totalServicesCount++;
-      if (state === "completed") {
-        completedServices++;
+          totalServicesCount++;
+          if (state === "completed") {
+            completedServices++;
+          }
+        }
+        const completedServicesRatio =
+          totalServicesCount > 0 ? completedServices / totalServicesCount : 0;
+        newComplete = completedServices === totalServicesCount;
+        const currentDate = new Date();
+        let state = "";
+
+        if (!newComplete) {
+          state = "Repair";
+        } else if (currentDate < repair.nextRepairDate && newComplete) {
+          state = "Good";
+        } else {
+          state = "Need to check";
+        }
+        const car_state = await Car.findOneAndUpdate(
+          { carNumber: repair.carNumber },
+          { State: state },
+          { new: true }
+        );
+
+        if (!car_state) {
+          return next(
+            new apiError(`No car for this number ${repair.carNumber}`, 404)
+          );
+        }
+
+        repair.Services = repair.Services.concat(req.body.services);
+        repair.complete = newComplete;
+        repair.completedServicesRatio = completedServicesRatio;
       }
     }
-    const completedServicesRatio =
-      totalServicesCount > 0 ? completedServices / totalServicesCount : 0;
-    newComplete = completedServices === totalServicesCount;
-    const currentDate = new Date();
-    let state = "";
-
-    if (!newComplete) {
-      state = "Repair";
-    } else if (currentDate < repair.nextRepairDate && newComplete) {
-      state = "Good";
-    } else {
-      state = "Need to check";
-    }
-    const car_state = await Car.findOneAndUpdate(
-      { carNumber: repair.carNumber },
-      { State: state },
-      { new: true }
-    );
-
-    if (!car_state) {
-      return next(
-        new apiError(`No car for this number ${repair.carNumber}`, 404)
-      );
-    }
-
-    repair.Services = repair.Services.concat(req.body.services);
-    repair.complete = newComplete;
-    repair.completedServicesRatio = completedServicesRatio;
     totalPrice = totalPrice + updateTotalPrice;
     priceAfterDiscount = priceAfterDiscount + updateTotalPrice;
+    diffPrice = 0;
     updateTotalPrice = 0;
   }
-
-  if (req.body.additions) {
-    for (const { price } of req.body.additions) {
-      if (price) {
-        updateTotalPrice += Number(price);
+  if (req.body.additions && req.body.additions.length > 0) {
+    for (const { id: additionId, name, price, remove } of req.body.additions) {
+      if (additionId) {
+        const repairAddition = repair.additions.find(
+          (comp) => comp._id.toString() === additionId
+        );
+        if (repairAddition) {
+          if (remove) {
+            updateTotalPrice -= repairAddition.price;
+            repair.additions = repair.additions.filter(
+              (comp) => comp._id.toString() !== additionId
+            );
+          } else {
+            if (name) {
+              repairAddition.name = name;
+            }
+            if (price) {
+              if (repairAddition.price > price) {
+                diffPrice = repairAddition.price - price;
+                updateTotalPrice -= diffPrice;
+              } else if (repairAddition.price < price) {
+                diffPrice = price - repairAddition.price;
+                updateTotalPrice += diffPrice;
+              }
+              repairAddition.price = price;
+            }
+          }
+          await repairAddition.save();
+        } else {
+          return next(
+            new apiError(
+              `addition with id ${additionId} not found in the repair`,
+              404
+            )
+          );
+        }
+      } else {
+        for (const { price } of req.body.additions) {
+          if (price) {
+            updateTotalPrice += Number(price);
+          }
+        }
+        repair.additions = repair.additions.concat(req.body.additions);
       }
     }
-    repair.additions = repair.additions.concat(req.body.additions);
     totalPrice = totalPrice + updateTotalPrice;
     priceAfterDiscount = priceAfterDiscount + updateTotalPrice;
     updateTotalPrice = 0;
+    diffPrice = 0;
   }
 
   if (req.body.discount) {
@@ -1054,5 +1131,3 @@ exports.deleteRepair = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ message: "deleted successfully" });
 });
-
-
