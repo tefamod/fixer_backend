@@ -742,12 +742,14 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
 
     const existingRepair = await Repairing.findOne({ genId: req.body.genId });
     if (existingRepair) {
-      return next(
-        new apiError(
-          `Repair with genId '${req.body.genId}' already exists`,
-          400
-        )
-      );
+      if (existingRepair.genId != repair.genId) {
+        return next(
+          new apiError(
+            `Repair with genId '${req.body.genId}' already exists`,
+            400
+          )
+        );
+      }
     }
 
     repair.genId = req.body.genId;
