@@ -10,6 +10,7 @@ const {
   searchForRepairingCars,
   updateCar,
   getCar,
+  deleteCar,
 } = require("../services/GarageServices");
 
 router.route("/").get(getCars);
@@ -20,5 +21,6 @@ router.route("/:carNumber").put(makeCarInRepair);
 router.route("/search/:searchString").get(searchForallCars);
 router.route("/search/repairing/:searchString").get(searchForRepairingCars);
 router.route("/update/:id").put(updateCar);
+router.route("/delete/:id").delete(deleteCar);
 
 module.exports = router;

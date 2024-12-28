@@ -451,38 +451,33 @@ exports.searchForRepairingCars = asyncHandler(async (req, res, next) => {
     data: documents,
   });
 });
-/*
-// @desc    get app version
-// @route   get /api/v1/Garage/appVersion/:id
+
+// @desc    delete car
+// @route   get /api/v1/Garage/delte/:id
 // @access  Private
 
-exports.getAppVersion = asyncHandler(async (req, res, next) => {
-  const { id } = req.params;
-  const car = await Car.findById(id);
+exports.deleteCar = asyncHandler(async (req, res, next) => {
+  const id = req.params.id;
 
-  if (!car) {
-    return next(new apiError(`Can't find services for this owner ${id}`, 404));
+  const expectedCar = await Car.findById(id);
+  if (!expectedCar) {
+    return next(new apiError(`Can't find car with this id ${id}`, 404));
   }
 
-  res.status(200).json(car.appVersion);
-});
-// @desc    put app version
-// @route   put /api/v1/Garage/appVersion/:id
-// @access  Private
-
-exports.putAppVersion = asyncHandler(async (req, res, next) => {
-  const { id } = req.params;
-  const { newAppVersion } = req.body;
-  const car = await Car.findByIdAndUpdate(
-    id,
-    { appVersion: newAppVersion },
-    { new: true }
-  );
-
-  if (!car) {
-    return next(new apiError(`Can't find services for this owner ${id}`, 404));
+  const user = await User.findOne({ name: expectedCar.ownerName });
+  if (!user) {
+    return next(new apiError(`Can't find owner for this car`, 404));
   }
+  if (user.car.length > 1) {
+    user.car = user.car.filter((c) => c.carNumber !== expectedCar.carNumber);
+    await user.save();
 
-  res.status(200).json(car.appVersion);
+    await expectedCar.deleteOne();
+
+    res.status(200).json(`Car deleted successfully`);
+  } else {
+    await user.deleteOne();
+    await expectedCar.deleteOne();
+    res.status(200).json(`The user deleted successfully `);
+  }
 });
-*/
