@@ -1084,7 +1084,9 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
   }
   if (req.body.daysItTake) {
     const expectedDate = new Date();
-    expectedDate.setDate(expectedDate.getDate() + parseInt(daysItTake));
+    expectedDate.setDate(
+      expectedDate.getDate() + parseInt(req.body.daysItTake)
+    );
     repair.expectedDate = expectedDate;
   }
   if (req.body.Note1 || req.body.Note2 || req.body.distance) {
