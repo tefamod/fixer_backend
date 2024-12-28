@@ -1082,7 +1082,11 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     }
     repair.nextRepairDistance = req.body.nextRepairDistance;
   }
-
+  if (req.body.daysItTake) {
+    const expectedDate = new Date();
+    expectedDate.setDate(expectedDate.getDate() + parseInt(daysItTake));
+    repair.expectedDate = expectedDate;
+  }
   if (req.body.Note1 || req.body.Note2 || req.body.distance) {
     repair.Note1 = req.body.Note1;
     repair.Note2 = req.body.Note2;
