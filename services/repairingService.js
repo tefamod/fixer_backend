@@ -1058,18 +1058,18 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     repair.type = req.body.type;
   }
 
-  if (req.body.nextPerDate) {
+  if (req.body.nextRepairDate) {
     if (!repair.complete) {
       await Car.findOneAndUpdate(
         { carNumber: repair.carNumber },
         {
           lastRepairDate: new Date(),
-          nextRepairDate: req.body.nextPerDate,
+          nextRepairDate: req.body.nextRepairDate,
         },
         { new: true }
       );
     }
-    repair.nextRepairDate = req.body.nextPerDate;
+    repair.nextRepairDate = req.body.nextRepairDate;
   }
 
   if (req.body.nextRepairDistance) {
