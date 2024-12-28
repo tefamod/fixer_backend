@@ -1009,11 +1009,22 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     diffPrice = 0;
   }
 
-  if (req.body.discount) {
+  if (req.body.discount !== undefined) {
+    let discount = 0;
     const discountValue = Number(req.body.discount) || 0;
-    priceAfterDiscount = priceAfterDiscount - discountValue;
-    repair.discount = (repair.discount || 0) + discountValue;
+
+    if (discountValue > repair.discount) {
+      discount = discountValue - repair.discount;
+      priceAfterDiscount -= discount;
+    } else if (discountValue < repair.discount) {
+      discount = repair.discount - discountValue;
+      priceAfterDiscount += discount;
+    } else if (discountValue === 0) {
+      priceAfterDiscount = repair.totalPrice;
+    }
+    repair.discount = discountValue;
   }
+
   if (req.body.type) {
     let periodicRepairs = 0;
     let nonperiodicRepairs = 0;
@@ -1047,24 +1058,28 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     repair.type = req.body.type;
   }
 
-  if (repair.complete && req.body.nextPerDate) {
-    await Car.findOneAndUpdate(
-      { carNumber: repair.carNumber },
-      {
-        lastRepairDate: new Date(),
-        nextRepairDate: req.body.nextPerDate,
-      },
-      { new: true }
-    );
+  if (req.body.nextPerDate) {
+    if (!repair.complete) {
+      await Car.findOneAndUpdate(
+        { carNumber: repair.carNumber },
+        {
+          lastRepairDate: new Date(),
+          nextRepairDate: req.body.nextPerDate,
+        },
+        { new: true }
+      );
+    }
     repair.nextRepairDate = req.body.nextPerDate;
   }
 
-  if (!repair.complete && req.body.nextRepairDistance) {
-    await Car.findOneAndUpdate(
-      { carNumber: repair.carNumber },
-      { nextRepairDistance: req.body.nextRepairDistance },
-      { new: true }
-    );
+  if (req.body.nextRepairDistance) {
+    if (!repair.complete) {
+      await Car.findOneAndUpdate(
+        { carNumber: repair.carNumber },
+        { nextRepairDistance: req.body.nextRepairDistance },
+        { new: true }
+      );
+    }
     repair.nextRepairDistance = req.body.nextRepairDistance;
   }
 
