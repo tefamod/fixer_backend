@@ -11,67 +11,48 @@ const asyncHandler = require("express-async-handler");
 exports.getHomepram = asyncHandler(async (req, res, next) => {
   const { carNumber } = req.params;
 
-  try {
-    const car = await Car.findOne({ carNumber });
+  const car = await Car.findOne({ carNumber });
 
-    if (!car) {
-      returnnext(
-        new apiError(`Can't find car for this car number ${carNumber}`, 404)
-      );
-    }
-
-    const repairing = await Repairing.findById(car.repairing_id);
-
-    if (!repairing) {
-      if (
-        car.nextRepairDate === undefined &&
-        car.lastRepairDate === undefined
-      ) {
-        return res.status(200).json({
-          data: {
-            createdDate: "-/-/-",
-            expectedDate: "-/-/-",
-            completedServicesRatio: 0,
-            state: car.State,
-            lastRepairDate: "-/-/-",
-            nextRepairDate: "-/-/-",
-            periodicRepairs: car.periodicRepairs,
-            nonperiodicRepairs: car.nonPeriodicRepairs,
-          },
-        });
-      }
-
-      /* if (car.nextRepairDate) {
-        return res.status(200).json({
-          data: {
-            createdDate: "-/-/-",
-            expectedDate: repairing.expectedDate,
-            completedServicesRatio: 0,
-            state: car.State,
-            lastRepairDate: car.lastRepairDate,
-            nextRepairDate: car.nextRepairDate,
-            periodicRepairs: car.periodicRepairs,
-            nonperiodicRepairs: car.nonPeriodicRepairs,
-          },
-        });
-      }*/
-    }
-
-    return res.status(200).json({
-      data: {
-        createdDate: repairing.createdAt,
-        expectedDate: repairing.expectedDate,
-        completedServicesRatio: repairing.completedServicesRatio,
-        state: car.State,
-        lastRepairDate: car.lastRepairDate,
-        nextRepairDate: car.nextRepairDate,
-        periodicRepairs: car.periodicRepairs,
-        nonperiodicRepairs: car.nonPeriodicRepairs,
-        nextRepairDistance: car.nextRepairDistance,
-      },
-    });
-  } catch (error) {
-    console.error("Error:", error);
-    next(new apiError("Internal Server Error", 500));
+  if (!car) {
+    return next(
+      new apiError(`Can't find car for this car number ${carNumber}`, 404)
+    );
   }
+
+  const repairing = await Repairing.findById(car.repairing_id);
+
+  if (!repairing) {
+    console.log("i`m here");
+    const defaultRepairData = {
+      createdDate: "-/-/-",
+      expectedDate: "-/-/-",
+      completedServicesRatio: 0,
+      state: car.State,
+      lastRepairDate: car.lastRepairDate || "-/-/-",
+      nextRepairDate: car.nextRepairDate || "-/-/-",
+      periodicRepairs: car.periodicRepairs || 0,
+      nonperiodicRepairs: car.nonPeriodicRepairs || 0,
+    };
+
+    if (!car.nextRepairDate && !car.lastRepairDate) {
+      console.log("Repairing and dates are not available.");
+      return res.status(200).json({ data: defaultRepairData });
+    }
+
+    return res.status(200).json({ data: defaultRepairData });
+  }
+
+  return res.status(200).json({
+    data: {
+      createdDate: repairing.createdAt || "-/-/-",
+      expectedDate: repairing.expectedDate || "-/-/-",
+      completedServicesRatio: repairing.completedServicesRatio || 0,
+      state: car.State,
+      lastRepairDate: car.lastRepairDate || "-/-/-",
+      nextRepairDate: car.nextRepairDate || "-/-/-",
+      periodicRepairs: car.periodicRepairs || 0,
+      nonperiodicRepairs: car.nonPeriodicRepairs || 0,
+      nextRepairDistance: car.nextRepairDistance || "-/-/-",
+    },
+  });
 });
