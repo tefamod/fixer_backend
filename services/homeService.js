@@ -22,7 +22,6 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
   const repairing = await Repairing.findById(car.repairing_id);
 
   if (!repairing) {
-    console.log("i`m here");
     const defaultRepairData = {
       createdDate: "-/-/-",
       expectedDate: "-/-/-",
@@ -35,7 +34,6 @@ exports.getHomepram = asyncHandler(async (req, res, next) => {
     };
 
     if (!car.nextRepairDate && !car.lastRepairDate) {
-      console.log("Repairing and dates are not available.");
       return res.status(200).json({ data: defaultRepairData });
     }
 
