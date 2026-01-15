@@ -14,7 +14,6 @@ const {
   updateUser,
   makeUserUnactive,
   uploadUserImage,
-  resizeImage,
   changeUserPassword,
   searchForUser,
   suggestNextCodeNumber,
@@ -23,6 +22,11 @@ const {
   updateLoggedUserData,
   deleteLoggedUserData,
 } = require("../services/userService");
+const { uploadSingleImage } = require("../middlewares/uploadImageMiddleware");
+const {
+  processUserImage,
+  UpdateUserImage,
+} = require("../middlewares/uploadImageCloud");
 
 const authService = require("../services/authService");
 
@@ -45,11 +49,17 @@ router.put(
 router
   .route("/")
   .get(getUsers)
-  .post(uploadUserImage, resizeImage, createUserValidator, createUser);
+  .post(uploadSingleImage("image"), processUserImage, createUser);
+
 router
   .route("/:id")
   .get(getUserValidator, getUser)
-  .put(uploadUserImage, resizeImage, updateUserValidator, updateUser);
+  .put(
+    uploadSingleImage("image"),
+    UpdateUserImage,
+    updateUserValidator,
+    updateUser
+  );
 router.route("/active/:id").put(makeUserUnactive);
 router.route("/search/:searchString").get(searchForUser);
 router.route("/carCode/:clientType").get(suggestNextCodeNumber);

@@ -20,6 +20,7 @@ const MonthlyReport = require("./routes/monthlyReportRoute");
 const CategoryCode = require("./routes/CategoryCodeRoute");
 const appVersion = require("./routes/appVersionRoute");
 const globalError = require("./middlewares/errorMiddleWare");
+const changeColor = require("./routes/changeColorRoute");
 
 //db connection
 dbconnection();
@@ -44,6 +45,7 @@ app.use("/api/V1/Worker", workerRoute);
 app.use("/api/V1/MonthlyReport", MonthlyReport);
 app.use("/api/V1/Category", CategoryCode);
 app.use("/api/V1/appVersion", appVersion);
+app.use("/api/V1/color", changeColor);
 // ping api
 app.get("/api/ping", (req, res) => {
   res.status(200).send("Server is alive!");

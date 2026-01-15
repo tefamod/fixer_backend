@@ -15,7 +15,8 @@ exports.verifyToken = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY); // Use your own secret key here
 
     // Attach decoded payload to request object
-    req.user = decoded;
+
+    req.userId = decoded.userId;
 
     // Move to the next middleware
     next();

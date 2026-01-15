@@ -8,6 +8,12 @@ const userSchema = new mongoose.Schema(
       trim: true,
       required: [true, "name required"],
     },
+    image: {
+      type: String,
+    },
+    imagePublicId: {
+      type: String,
+    },
     slug: {
       type: String,
       lowercase: true,
