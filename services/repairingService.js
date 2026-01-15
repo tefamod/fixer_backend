@@ -74,8 +74,15 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
           },
         },
       },
+      { $sort: { numericCode: -1 } }, // ترتيب تنازلي
+      { $limit: 1 }, // آخر رقم فقط
     ]);
-
+    if (repairs.length > 0 && !isNaN(repairs[0].numericCode)) {
+      newId = const_part_of_id + (repairs[0].numericCode + 1);
+    } else {
+      newId = const_part_of_id + "1";
+    }
+    /* لو عايز أرقم من الأرقام الناقصة فى النص
     const validCodes = repairs
       .map((repair) => repair.numericCode)
       .filter((num) => !isNaN(num) && num > 0)
@@ -84,6 +91,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     //find the first missing number or create the next newId
     if (validCodes.length > 0) {
       for (let i = 0; i < validCodes.length; i++) {
+      #علشان أكدد الترتيب  1 2 3 وهكذا 
         if (validCodes[i] !== i + 1) {
           newId = const_part_of_id + (i + 1);
           break;
@@ -95,7 +103,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
       }
     } else {
       newId = const_part_of_id + "1";
-    }
+    }*/
   }
   if (!components || !services || !additions) {
     return next(

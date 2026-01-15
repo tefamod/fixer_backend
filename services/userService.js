@@ -6,15 +6,13 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const factory = require("./handlersFactory");
 const ApiError = require("../utils/apiError");
-const { uploadSingleImage } = require("../middlewares/uploadImageMiddleware");
+
 const createToken = require("../utils/createToken");
 const User = require("../models/userModel");
 const Car = require("../models/Car");
 const ApiFeatures = require("../utils/apiFeatures");
 const sendEmail = require("../utils/sendEmail");
 const CategoryCode = require("../models/categoryCode");
-// Upload single image
-exports.uploadUserImage = uploadSingleImage("profileImg");
 
 // Function to generate a unique 8-digit code
 const generateUniqueCode = async () => {
@@ -33,24 +31,98 @@ const generateUniqueCode = async () => {
 
   return code;
 };
-// Image processing
-exports.resizeImage = asyncHandler(async (req, res, next) => {
-  const filename = `user-${uuidv4()}-${Date.now()}.jpeg`;
 
-  if (req.file) {
-    await sharp(req.file.buffer)
-      .resize(600, 600)
-      .toFormat("jpeg")
-      .jpeg({ quality: 95 })
-      .toFile(`uploads/users/${filename}`);
-
-    // Save image into our db
-    req.body.profileImg = filename;
+const Emailsender = async ({ name, email, newCarCode, generatedPassword }) => {
+  const message = `Dear ${name},\n\nYour car has been successfully registered with us.\n\nHere are your credentials:\ncar Code: ${newCarCode}\nPassword: ${generatedPassword}\n\nThank you for choosing our service.\n\nBest regards,\nThe Car Service Center Team`;
+  try {
+    await sendEmail({
+      email: email,
+      subject: "Your password",
+      message,
+      html: `
+      <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Registration Details</title>
+    <style>
+        
+        body, h1, p {
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #f68b1e;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        p {
+            margin-bottom: 20px;
+            line-height: 1.6;
+            
+        }
+        
+        .credentials {
+            background-color: #f68b1e;
+            padding: 15px;
+            color: white;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .credentials p {
+          color: white; 
+      }
+        .footer {
+            background-color: #f8f8f8;
+            text-align: center;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            border-radius: 0 0 8px 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="https://raw.githubusercontent.com/joeshwoa/fixer_system/main/assets/images/51.png" alt="Logo" style="display: block; margin: 0 auto; max-width: 200px; margin-bottom: 20px;">
+        <h1>Car Registration Details</h1>
+        <p>Dear ${name},</p>
+        <p>Your car has been successfully registered with us.</p>
+        <div class="credentials">
+            <p><strong>Car Code:</strong> ${newCarCode}</p>
+            <p><strong>Password:</strong> ${generatedPassword}</p>
+        </div>
+        <p>Thank you for choosing our service.</p>
+        <p>Best regards,<br>The Car Service Center Team</p>
+    </div>
+    <div class="footer">
+        &copy; 2024 Car Service Center. All rights reserved.
+    </div>
+</body>
+</html>
+`,
+    });
+  } catch (err) {
+    console.log("There is an error in sending email", err);
   }
-
-  next();
-});
-
+};
 // @desc    Get list of users
 // @route   GET /api/v1/users
 // @access  Private/Admin
@@ -216,6 +288,7 @@ exports.createUser = asyncHandler(async (req, res, next) => {
     periodicRepairs: req.body.periodicRepairs,
     nonPeriodicRepairs: req.body.nonPeriodicRepairs,
   });
+
   const user = await User.create({
     name: req.body.name,
     carNumber: req.body.carNumber,
@@ -233,109 +306,25 @@ exports.createUser = asyncHandler(async (req, res, next) => {
       },
     ],
     role: req.body.role,
+    image: req.body.image,
+    imagePublicId: req.body.imagePublicId,
   });
 
   // 2- Generate token
   const token = createToken(user._id);
   try {
-    res.status(201).json({ data: user, newCar, token });
+    // 3) Send the reset code via email
+    await Emailsender({
+      name: req.body.name,
+      email: req.body.email,
+      newCarCode,
+      generatedPassword,
+    });
   } catch (err) {
+    console.log("Email sender error", err);
     return next(new ApiError("There is an error", 500));
   }
-  // 3) Send the reset code via email
-  const message = `Dear ${req.body.name},\n\nYour car has been successfully registered with us.\n\nHere are your credentials:\ncar Code: ${newCarCode}\nPassword: ${generatedPassword}\n\nThank you for choosing our service.\n\nBest regards,\nThe Car Service Center Team`;
-  try {
-    await sendEmail({
-      email: req.body.email,
-      subject: "Your password",
-      message,
-      html: `
-      <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Car Registration Details</title>
-    <style>
-        
-        body, h1, p {
-            margin: 0;
-            padding: 0;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f8f8f8;
-            color: #333;
-        }
-        
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        h1 {
-            color: #f68b1e;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        p {
-            margin-bottom: 20px;
-            line-height: 1.6;
-            
-        }
-        
-        .credentials {
-            background-color: #f68b1e;
-            padding: 15px;
-            color: white;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .credentials p {
-          color: white; 
-      }
-        .footer {
-            background-color: #f8f8f8;
-            text-align: center;
-            padding: 10px;
-            border-top: 1px solid #ddd;
-            border-radius: 0 0 8px 8px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <img src="https://raw.githubusercontent.com/joeshwoa/fixer_system/main/assets/images/51.png" alt="Logo" style="display: block; margin: 0 auto; max-width: 200px; margin-bottom: 20px;">
-        <h1>Car Registration Details</h1>
-        <p>Dear ${req.body.name},</p>
-        <p>Your car has been successfully registered with us.</p>
-        <div class="credentials">
-            <p><strong>Car Code:</strong> ${newCarCode}</p>
-            <p><strong>Password:</strong> ${generatedPassword}</p>
-        </div>
-        <p>Thank you for choosing our service.</p>
-        <p>Best regards,<br>The Car Service Center Team</p>
-    </div>
-    <div class="footer">
-        &copy; 2024 Car Service Center. All rights reserved.
-    </div>
-</body>
-</html>
-`,
-    });
-
-    res
-      .status(200)
-      .json({ status: "Success", message: "Reset code sent to email" });
-  } catch (err) {
-    return next(new ApiError("There is an error in sending email", 500));
-  }
+  res.status(201).json({ data: user, newCar, token });
 });
 
 // @desc    Update specific user
