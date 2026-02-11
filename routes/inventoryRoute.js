@@ -7,10 +7,11 @@ const {
   UpdateComponent,
   getCom,
   searchCom,
+  getAllUnits,
 } = require("../services/InventoryServies");
 
 router.route("/").get(getAllCom).post(addComponent);
-
+router.route("/Units/").get(getAllUnits);
 router.route("/:id").get(getCom).put(UpdateComponent);
 router.route("/search/:searchString").get(searchCom);
 

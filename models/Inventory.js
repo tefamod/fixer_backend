@@ -15,9 +15,17 @@ const inventorySchema = new mongoose.Schema(
       type: Number,
       required: [true, "the price is required"],
     },
+    Unit: {
+      type: String,
+    },
+    Code: {
+      type: String,
+      required: [true, "the Code is required"],
+      unique: [true, "the Code is used before"],
+    },
   },
   // مفيده ليا لو عايز اجيب ال منتج الاحدث بالوقت
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("Inventory", inventorySchema);

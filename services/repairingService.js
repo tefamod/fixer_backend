@@ -9,60 +9,38 @@ const ApiFeatures = require("../utils/apiFeatures");
 const asyncHandler = require("express-async-handler");
 const { body } = require("express-validator");
 
-// @desc create a repairing
-// @Route POST /api/v1/repairing
-// @access private
+const generateNewRepairId = async (
+  const_part_of_id = "2021",
+  manualId = null,
+) => {
+  let newId = "";
 
-exports.createRepairing = asyncHandler(async (req, res, next) => {
-  let totalPrice = 0;
-  let totalServicesCount = 0;
-  let completedServices = 0;
-  let periodicRepairs = 0;
-  let nonperiodicRepairs = 0;
-  let complete = false;
-  let newId = 0;
-  const const_part_of_id = "2021";
-  const {
-    components,
-    services,
-    additions,
-    carNumber,
-    type,
-    discount,
-    daysItTake,
-    nextPerDate,
-    Note1,
-    Note2,
-    distance,
-    nextRepairDistance,
-  } = req.body;
-  if (req.body.manually == "True" || req.body.manually == true) {
-    const id = req.body.id;
-    const parsedCarCode = parseInt(id, 10);
+  if (manualId !== null) {
+    const parsedCarCode = parseInt(manualId, 10);
 
     if (isNaN(parsedCarCode) || !Number.isInteger(parsedCarCode)) {
-      return next(new apiError(`Invalid carCode. It must be a number.`, 400));
+      throw new Error("Invalid carCode. It must be a number.");
     }
 
     newId = const_part_of_id + parsedCarCode;
+
     const exRepair = await Repairing.findOne({ genId: newId });
     if (exRepair) {
-      return next(
-        new apiError(`Repairing with id ${newId} already exists.`, 400)
-      );
+      throw new Error(`Repairing with id ${newId} already exists.`);
     }
   } else {
+    // automatic id
     const regex = new RegExp("^" + const_part_of_id + "\\d+$", "i");
 
-    const repairs = await Repairing.aggregate([
-      { $match: { genId: regex } }, //match genId starting with '2021'
+    const lastRepair = await Repairing.aggregate([
+      { $match: { genId: regex } },
       {
         $project: {
           numericCode: {
             $toInt: {
               $substr: [
                 "$genId",
-                { $strLenCP: const_part_of_id }, //skip 2021
+                { $strLenCP: const_part_of_id },
                 {
                   $subtract: [
                     { $strLenCP: "$genId" },
@@ -74,11 +52,12 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
           },
         },
       },
-      { $sort: { numericCode: -1 } }, // ترتيب تنازلي
-      { $limit: 1 }, // آخر رقم فقط
+      { $sort: { numericCode: -1 } },
+      { $limit: 1 },
     ]);
-    if (repairs.length > 0 && !isNaN(repairs[0].numericCode)) {
-      newId = const_part_of_id + (repairs[0].numericCode + 1);
+
+    if (lastRepair.length > 0 && !isNaN(lastRepair[0].numericCode)) {
+      newId = const_part_of_id + (lastRepair[0].numericCode + 1);
     } else {
       newId = const_part_of_id + "1";
     }
@@ -105,12 +84,57 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
       newId = const_part_of_id + "1";
     }*/
   }
+
+  return newId;
+};
+// @desc create a repairing
+// @Route POST /api/v1/repairing
+// @access private
+exports.createRepairing = asyncHandler(async (req, res, next) => {
+  let totalPrice = 0;
+  let totalServicesCount = 0;
+  let completedServices = 0;
+  let periodicRepairs = 0;
+  let nonperiodicRepairs = 0;
+  let complete = false;
+  const {
+    components,
+    services,
+    additions,
+    carNumber,
+    type,
+    discount,
+    daysItTake,
+    nextPerDate,
+    Note1,
+    Note2,
+    distance,
+    nextRepairDistance,
+  } = req.body;
+  if (req.body.manually == "True" || req.body.manually == true) {
+    const id = req.body.id;
+    const parsedCarCode = parseInt(id, 10);
+
+    if (isNaN(parsedCarCode) || !Number.isInteger(parsedCarCode)) {
+      return next(new apiError(`Invalid carCode. It must be a number.`, 400));
+    }
+
+    newId = const_part_of_id + parsedCarCode;
+    const exRepair = await Repairing.findOne({ genId: newId });
+    if (exRepair) {
+      return next(
+        new apiError(`Repairing with id ${newId} already exists.`, 400),
+      );
+    }
+  } else {
+    newId = await generateNewRepairId("2021");
+  }
   if (!components || !services || !additions) {
     return next(
       new apiError(
         "Components, services, and additions arrays are required",
-        400
-      )
+        400,
+      ),
     );
   }
 
@@ -133,7 +157,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
 
     if (!inventoryComponent) {
       return next(
-        new apiError(`Component with ID ${id} not found in inventory`, 404)
+        new apiError(`Component with ID ${id} not found in inventory`, 404),
       );
     }
     if (
@@ -141,7 +165,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
       inventoryComponent.quantity < 0
     ) {
       return next(
-        new apiError(`Not enough quantity for component with id ${id}`, 400)
+        new apiError(`Not enough quantity for component with id ${id}`, 400),
       );
     }
     inventoryComponent.quantity -= quantity;
@@ -177,7 +201,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     }
   } else {
     return next(
-      new apiError(`the type must be periodic or nonPeriodic only`, 400)
+      new apiError(`the type must be periodic or nonPeriodic only`, 400),
     );
   }
   reCar.periodicRepairs = periodicRepairs;
@@ -197,7 +221,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
         nextRepairDate: nextPerDate,
         repairing: !complete,
       },
-      { new: true }
+      { new: true },
     );
 
     if (!car) {
@@ -221,7 +245,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
   const car_state = await Car.findOneAndUpdate(
     { carNumber: carNumber },
     { State: state },
-    { new: true }
+    { new: true },
   );
 
   if (!car_state) {
@@ -231,7 +255,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
   const car_ratio = await Car.findOneAndUpdate(
     { carNumber: carNumber },
     { completedServicesRatio: completedServicesRatio, nextRepairDistance },
-    { new: true }
+    { new: true },
   );
 
   if (!car_ratio) {
@@ -269,7 +293,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     const car = await Car.findOneAndUpdate(
       { carNumber: carNumber },
       { repairing_id: repair._id, repairing: true },
-      { new: true }
+      { new: true },
     );
 
     if (!car) {
@@ -394,12 +418,12 @@ exports.getCarRepairsByNumber = asyncHandler(async (req, res, next) => {
       return next(
         new apiError(
           `Can't find services for this car number ${carNumber}`,
-          404
-        )
+          404,
+        ),
       );
     }
     sortedRepairs = repairing.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
     );
     res.status(200).json({ data: repairing });
   } catch (error) {
@@ -421,8 +445,8 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
     return next(
       new apiError(
         `Service with ID ${serviceId} not found in any repairing document`,
-        404
-      )
+        404,
+      ),
     );
   }
 
@@ -432,8 +456,8 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
     return next(
       new apiError(
         `Service with ID ${serviceId} not found within any repairing document`,
-        404
-      )
+        404,
+      ),
     );
   }
 
@@ -443,7 +467,7 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
   // Update completed services count and ratio
   const totalServicesCount = repairingDoc.Services.length;
   const completedServices = repairingDoc.Services.filter(
-    (s) => s.state === "completed"
+    (s) => s.state === "completed",
   ).length;
 
   repairingDoc.completedServicesRatio =
@@ -460,7 +484,7 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
 
   if (!car) {
     return next(
-      new apiError(`No car found for number ${repairingDoc.carNumber}`, 404)
+      new apiError(`No car found for number ${repairingDoc.carNumber}`, 404),
     );
   }
 
@@ -501,60 +525,56 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
 exports.getAllComRepairs = asyncHandler(async (req, res, next) => {
   let filter = { complete: true };
 
+  // 👇 limit ثابت 50
+  req.query.limit = 50;
+
+  // احسب عدد المستندات قبل أي فلتر
   const documentsCounts = await Repairing.countDocuments(filter);
+
+  // استخدم ApiFeatures لكل الخصائص: filter, search, limitFields, sort
   const apiFeatures = new ApiFeatures(Repairing.find(filter), req.query)
-    .paginate(documentsCounts)
     .filter()
     .search()
     .limitFields()
-    .sort();
+    .sort()
+    .paginate(documentsCounts); // paginate آخر حاجة
 
-  const { mongooseQuery, paginationResult } = apiFeatures;
-  const repairs = await mongooseQuery;
+  const repairs = await apiFeatures.mongooseQuery;
 
+  // جلب العربيات الموجودة
   const carNumbers = repairs.map((repair) => repair.carNumber);
-
   const cars = await Car.find({ carNumber: { $in: carNumbers } });
 
-  const carCodeMap = {};
+  const carMap = {};
   cars.forEach((car) => {
-    carCodeMap[car.carNumber] = car.generatedCode;
+    carMap[car.carNumber] = car;
   });
 
-  let enrichedRepairs = repairs.map((repair) => {
-    const carCode = carCodeMap[repair.carNumber];
-    const car = cars.find((car) => car.carNumber === repair.carNumber);
-    if (car) {
-      return {
-        brand: car.brand,
-        category: car.category,
-        model: car.model,
-        client: repair.client,
-        priceAfterDiscount: repair.priceAfterDiscount,
-        carCode: carCode,
-        paidOn: repair.createdAt,
-        id: repair._id,
-      };
-    } else {
-      return next(
-        new apiError(
-          `there is an error in car informations of this car number ${repair.carNumber}`,
-          400
-        )
-      );
-    }
+  // دمج بيانات الـ repair مع العربية (ولو العربية اتمسحت يرجع null)
+  const enrichedRepairs = repairs.map((repair) => {
+    const car = carMap[repair.carNumber];
+
+    return {
+      brand: car?.brand || null,
+      category: car?.category || null,
+      model: car?.model || null,
+      client: repair.client,
+      priceAfterDiscount: repair.priceAfterDiscount,
+      carCode: car?.generatedCode || null,
+      paidOn: repair.updatedAt,
+      id: repair._id,
+      carDeleted: !car, // لو العربية اتمسحت
+    };
   });
-  enrichedRepairs = enrichedRepairs.sort(
-    (a, b) => new Date(b.paidOn) - new Date(a.paidOn)
-  );
 
   res.status(200).json({
     results: enrichedRepairs.length,
-    paginationResult,
+    currentPage: apiFeatures.paginationResult.currentPage,
+    totalPages: apiFeatures.paginationResult.numberOfPages,
+    totalDocuments: documentsCounts,
     data: enrichedRepairs,
   });
 });
-
 // @desc Search for car services by owner Name
 // @Route GET /api/v1/repairing/owner/:ownerName
 // @access private
@@ -575,7 +595,7 @@ exports.getCarRepairsByid = asyncHandler(async (req, res, next) => {
     return next(new apiError(`Can't find services for this owner ${id}`, 404));
   }
   sortedRepairs = repairing.sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
   );
   res.status(200).json({ data: sortedRepairs });
 });
@@ -592,8 +612,8 @@ exports.getCarRepairsByGenCode = asyncHandler(async (req, res, next) => {
     return next(
       new apiError(
         `Can't find car with this generated Code: ${generatedCode}`,
-        404
-      )
+        404,
+      ),
     );
   }
 
@@ -603,7 +623,7 @@ exports.getCarRepairsByGenCode = asyncHandler(async (req, res, next) => {
   });
   const apiFeatures = new ApiFeatures(
     Repairing.find({ carNumber: { $in: car.carNumber } }),
-    req.query
+    req.query,
   )
     .paginate(documentsCount)
     .filter()
@@ -615,7 +635,7 @@ exports.getCarRepairsByGenCode = asyncHandler(async (req, res, next) => {
 
   // Sort repairs by creation date
   repairs = repairs.sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
   );
 
   // Respond with paginated repair data
@@ -642,7 +662,10 @@ exports.getRepairsReport = asyncHandler(async (req, res, next) => {
 
   if (!carInfo) {
     return next(
-      new apiError(`Can't find services for this car ${carInfo.carNumber}`, 404)
+      new apiError(
+        `Can't find services for this car ${carInfo.carNumber}`,
+        404,
+      ),
     );
   }
 
@@ -650,7 +673,7 @@ exports.getRepairsReport = asyncHandler(async (req, res, next) => {
 
   if (!userInfo) {
     return next(
-      new apiError(`Can't car for this user ${carInfo.ownerName}`, 404)
+      new apiError(`Can't car for this user ${carInfo.ownerName}`, 404),
     );
   }
 
@@ -673,53 +696,7 @@ exports.getRepairsReport = asyncHandler(async (req, res, next) => {
   });
 });
 exports.suggestNextCodeNumber = asyncHandler(async (req, res, next) => {
-  const const_part_of_id = "2021";
-  let newId = null;
-  const regex = new RegExp("^" + const_part_of_id + "\\d+$", "i");
-
-  const repairs = await Repairing.aggregate([
-    { $match: { genId: regex } },
-    {
-      $project: {
-        numericCode: {
-          $toInt: {
-            $substr: [
-              "$genId",
-              { $strLenCP: const_part_of_id },
-              {
-                $subtract: [
-                  { $strLenCP: "$genId" },
-                  { $strLenCP: const_part_of_id },
-                ],
-              },
-            ],
-          },
-        },
-      },
-    },
-  ]);
-
-  const validCodes = repairs
-    .map((repair) => repair.numericCode)
-    .filter((num) => !isNaN(num) && num > 0)
-    .sort((a, b) => a - b);
-
-  //find the first missing number or create the next newId
-  if (validCodes.length > 0) {
-    for (let i = 0; i < validCodes.length; i++) {
-      if (validCodes[i] !== i + 1) {
-        newId = i + 1;
-        break;
-      }
-    }
-
-    if (!newId) {
-      newId = validCodes.length + 1;
-    }
-  } else {
-    newId = "1";
-  }
-
+  newId = await generateNewRepairId("2021");
   res.status(200).json({ data: newId });
 });
 
@@ -743,8 +720,8 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
       return next(
         new apiError(
           "genId must start with '2021' and contain only numbers",
-          400
-        )
+          400,
+        ),
       );
     }
 
@@ -754,8 +731,8 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
         return next(
           new apiError(
             `Repair with genId '${req.body.genId}' already exists`,
-            400
-          )
+            400,
+          ),
         );
       }
     }
@@ -766,7 +743,7 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     for (const { id: componentId, quantity } of req.body.components) {
       //search in the repair components
       const repairComponent = repair.component.find(
-        (comp) => comp._id.toString() === componentId
+        (comp) => comp._id.toString() === componentId,
       );
       const inventory = await Inventory.findOne({
         name: repairComponent.name,
@@ -782,13 +759,13 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
             return next(
               new apiError(
                 `Component with name ${repairComponent.name} not found in inventory`,
-                404
-              )
+                404,
+              ),
             );
           }
           //remove the component from the repair
           repair.component = repair.component.filter(
-            (comp) => comp._id.toString() !== componentId
+            (comp) => comp._id.toString() !== componentId,
           );
         } else {
           if (repairComponent.quantity < quantity) {
@@ -803,8 +780,8 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
               return next(
                 new apiError(
                   `Component with name ${repairComponent.name} not found in inventory`,
-                  404
-                )
+                  404,
+                ),
               );
             }
             repairComponent.quantity = quantity;
@@ -820,8 +797,8 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
               return next(
                 new apiError(
                   `Component with name ${repairComponent.name} not found in inventory`,
-                  404
-                )
+                  404,
+                ),
               );
             }
             repairComponent.quantity = quantity;
@@ -838,8 +815,8 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
           return next(
             new apiError(
               `Component with ID ${componentId} not found in inventory`,
-              404
-            )
+              404,
+            ),
           );
         }
         if (inventoryComponent) {
@@ -847,8 +824,8 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
             return next(
               new apiError(
                 `in the add operation the quantity must be greater than zero`,
-                404
-              )
+                404,
+              ),
             );
           }
         }
@@ -858,7 +835,10 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
           inventoryComponent.quantity < 0
         ) {
           return next(
-            new apiError(`Not enough quantity for component with ID ${id}`, 400)
+            new apiError(
+              `Not enough quantity for component with ID ${id}`,
+              400,
+            ),
           );
         }
 
@@ -885,13 +865,13 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     for (const { id: serviceId, name, price, remove } of req.body.services) {
       if (serviceId) {
         const repairService = repair.Services.find(
-          (comp) => comp._id.toString() === serviceId
+          (comp) => comp._id.toString() === serviceId,
         );
         if (repairService) {
           if (remove) {
             updateTotalPrice -= repairService.price;
             repair.Services = repair.Services.filter(
-              (comp) => comp._id.toString() !== serviceId
+              (comp) => comp._id.toString() !== serviceId,
             );
           } else {
             if (name) {
@@ -913,14 +893,14 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
           return next(
             new apiError(
               `Service with id ${serviceId} not found in the repair`,
-              404
-            )
+              404,
+            ),
           );
         }
       } else {
         let totalServicesCount = repair.Services.length;
         let completedServices = repair.Services.filter(
-          (service) => service.state === "completed"
+          (service) => service.state === "completed",
         ).length;
 
         for (const { price, state } of req.body.services) {
@@ -947,12 +927,12 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
         const car_state = await Car.findOneAndUpdate(
           { carNumber: repair.carNumber },
           { State: state },
-          { new: true }
+          { new: true },
         );
 
         if (!car_state) {
           return next(
-            new apiError(`No car for this number ${repair.carNumber}`, 404)
+            new apiError(`No car for this number ${repair.carNumber}`, 404),
           );
         }
 
@@ -970,13 +950,13 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
     for (const { id: additionId, name, price, remove } of req.body.additions) {
       if (additionId) {
         const repairAddition = repair.additions.find(
-          (comp) => comp._id.toString() === additionId
+          (comp) => comp._id.toString() === additionId,
         );
         if (repairAddition) {
           if (remove) {
             updateTotalPrice -= repairAddition.price;
             repair.additions = repair.additions.filter(
-              (comp) => comp._id.toString() !== additionId
+              (comp) => comp._id.toString() !== additionId,
             );
           } else {
             if (name) {
@@ -998,8 +978,8 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
           return next(
             new apiError(
               `addition with id ${additionId} not found in the repair`,
-              404
-            )
+              404,
+            ),
           );
         }
       } else {
@@ -1056,7 +1036,7 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
       }
     } else {
       return next(
-        new apiError(`the type must be periodic or nonPeriodic only`, 400)
+        new apiError(`the type must be periodic or nonPeriodic only`, 400),
       );
     }
     reCar.periodicRepairs = periodicRepairs;
@@ -1074,7 +1054,7 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
           lastRepairDate: new Date(),
           nextRepairDate: req.body.nextRepairDate,
         },
-        { new: true }
+        { new: true },
       );
     }
     repair.nextRepairDate = req.body.nextRepairDate;
@@ -1085,7 +1065,7 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
       await Car.findOneAndUpdate(
         { carNumber: repair.carNumber },
         { nextRepairDistance: req.body.nextRepairDistance },
-        { new: true }
+        { new: true },
       );
     }
     repair.nextRepairDistance = req.body.nextRepairDistance;
@@ -1093,7 +1073,7 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
   if (req.body.daysItTake) {
     const expectedDate = new Date();
     expectedDate.setDate(
-      expectedDate.getDate() + parseInt(req.body.daysItTake)
+      expectedDate.getDate() + parseInt(req.body.daysItTake),
     );
     repair.expectedDate = expectedDate;
   }

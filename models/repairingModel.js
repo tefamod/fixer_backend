@@ -22,9 +22,6 @@ const repairingSchema = new mongoose.Schema(
     brand: { type: String },
     category: { type: String },
     model: { type: String },
-    discount: {
-      type: Number,
-    },
     totalPrice: {
       type: Number,
     },
@@ -36,9 +33,6 @@ const repairingSchema = new mongoose.Schema(
       type: String,
       enum: ["periodic", "nonPeriodic"],
       default: "periodic",
-    },
-    expectedDate: {
-      type: Date,
     },
     Services: [
       {
@@ -120,7 +114,7 @@ const repairingSchema = new mongoose.Schema(
   },
 
   // مفيده ليا لو عايز اجيب ال منتج الاحدث بالوقت
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("repairing", repairingSchema);
