@@ -16,8 +16,8 @@ const {
 } = require("../services/categoryCodeService");
 
 router.route("/").post(createCategoryCode).get(getallCategoryCode);
+router.route("/category/fordrop/").get(getallCategoryOnly);
 router.route("/:id").get(getCategoryCode).put(updateCategory);
 router.route("/search/:searchString").get(searchInCategory);
-router.route("/category/fordrop/").get(getallCategoryOnly);
 
 module.exports = router;

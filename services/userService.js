@@ -163,14 +163,14 @@ exports.getUsers = asyncHandler(async (req, res) => {
     return formattedUser;
   });
   sortedRepairs = formattedUsers.sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
   );
 
   if (paginationResult.limit > users.length) {
     paginationResult.numberOfPages = 1;
   } else {
     paginationResult.numberOfPages = Math.ceil(
-      users.length / paginationResult.limit
+      users.length / paginationResult.limit,
     );
   }
   res.status(200).json({
@@ -205,15 +205,15 @@ exports.createUser = asyncHandler(async (req, res, next) => {
     return next(
       new ApiError(
         `There is already a car with the same car number ${carNumber}`,
-        400
-      )
+        400,
+      ),
     );
   }
   if (req.body.manually == "True" || req.body.manually == "true") {
     const categoryCode = await CategoryCode.findOne({ category: clientType });
     if (!categoryCode) {
       return next(
-        new ApiError(`There is no type with this name ${clientType}`, 400)
+        new ApiError(`There is no type with this name ${clientType}`, 400),
       );
     }
     const carCode = req.body.carCode;
@@ -228,7 +228,7 @@ exports.createUser = asyncHandler(async (req, res, next) => {
     const categoryCode = await CategoryCode.findOne({ category: clientType });
     if (!categoryCode) {
       return next(
-        new ApiError(`There is no type with this name ${clientType}`, 400)
+        new ApiError(`There is no type with this name ${clientType}`, 400),
       );
     }
 
@@ -362,7 +362,7 @@ exports.changeUserPassword = asyncHandler(async (req, res, next) => {
     },
     {
       new: true,
-    }
+    },
   );
 
   if (!document) {
@@ -385,7 +385,7 @@ exports.makeUserUnactive = asyncHandler(async (req, res, next) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { active },
-    { new: true }
+    { new: true },
   );
 
   if (!user) {
@@ -416,7 +416,7 @@ exports.updateLoggedUserPassword = asyncHandler(async (req, res, next) => {
     },
     {
       new: true,
-    }
+    },
   );
 
   // 2) Generate token
@@ -436,7 +436,7 @@ exports.updateLoggedUserData = asyncHandler(async (req, res, next) => {
       email: req.body.email,
       phone: req.body.phone,
     },
-    { new: true }
+    { new: true },
   );
 
   res.status(200).json({ data: updatedUser });
@@ -451,72 +451,52 @@ exports.deleteLoggedUserData = asyncHandler(async (req, res, next) => {
   res.status(204).json({ status: "Success" });
 });
 
-// @desc    search for user
-// @route   get /api/v1/users/search
-// @access  Private
 exports.searchForUser = asyncHandler(async (req, res, next) => {
   const { searchString } = req.params;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
+
   let query = User.find();
 
   if (searchString) {
-    const schema = User.schema;
-    const paths = Object.keys(schema.paths);
-    for (let i = 0; i < paths.length; i++) {
-      const orConditions = paths
-        .filter(
-          (path) =>
-            schema.paths[path].instance === "String" && // Filter only string type parameters
-            (path === "email" ||
-              path === "name" ||
-              path === "phoneNumber" ||
-              path === "role") // Filter specific fields for search
-        )
-        .map((path) => ({
-          [path]: { $regex: searchString, $options: "i" },
-        }));
+    const orConditions = [
+      { name: { $regex: searchString, $options: "i" } },
+      { email: { $regex: searchString, $options: "i" } },
+      { phoneNumber: { $regex: searchString, $options: "i" } },
+      { role: { $regex: searchString, $options: "i" } },
+    ];
 
-      query = query.or(orConditions);
-    }
+    query = query.or(orConditions);
   }
+
   const documents = await query.sort({ createdAt: -1 }).skip(skip).limit(limit);
 
-  if (!documents || documents.length === 0) {
+  const totalDocuments = await User.countDocuments(query.getQuery());
+  console.log(totalDocuments);
+  if (totalDocuments === 0) {
     return next(
-      new apiError(
+      new ApiError(
         `No document found for the search string ${searchString}`,
-        404
-      )
+        404,
+      ),
     );
   }
-  const totalDocuments = await User.countDocuments(query.getQuery());
+
   const totalPages = Math.ceil(totalDocuments / limit);
 
-  const formattedUsers = documents.map((user) => {
-    const formattedUser = {
-      name: user.name,
-      id: user._id,
-      phoneNumber: user.phoneNumber,
-      createdAt: user.createdAt,
-      //cars: user.car.map((car) => ({
-      // Map through each car
-      //  id: car._id,
-      //  carNumber: car.carNumber,
-      //  brand: car.brand,
-      //  category: car.category,
-      //  model: car.model,
-      //})),
-    };
+  const formattedUsers = documents.map((user) => ({
+    name: user.name,
+    id: user._id,
+    phoneNumber: user.phoneNumber,
+    createdAt: user.createdAt,
+  }));
 
-    return formattedUser;
-  });
   res.status(200).json({
-    results: documents.length,
+    results: formattedUsers.length,
     paginationResult: {
       currentPage: page,
-      limit: limit,
+      limit,
       numberOfPages: totalPages,
     },
     data: formattedUsers,
@@ -566,8 +546,8 @@ exports.suggestNextCodeNumber = asyncHandler(async (req, res, next) => {
     return next(
       new ApiError(
         `There is no type with this name ${clientType.clientType}`,
-        400
-      )
+        400,
+      ),
     );
   }
   let newCarCode = 0;
