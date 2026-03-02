@@ -6,14 +6,13 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const factory = require("./handlersFactory");
 const ApiError = require("../utils/apiError");
-
 const createToken = require("../utils/createToken");
 const User = require("../models/userModel");
 const Car = require("../models/Car");
 const ApiFeatures = require("../utils/apiFeatures");
 const sendEmail = require("../utils/sendEmail");
 const CategoryCode = require("../models/categoryCode");
-
+const searchService = require("./searchService");
 // Function to generate a unique 8-digit code
 const generateUniqueCode = async () => {
   let isUnique = false;
@@ -455,35 +454,20 @@ exports.searchForUser = asyncHandler(async (req, res, next) => {
   const { searchString } = req.params;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
-  const skip = (page - 1) * limit;
-
-  let query = User.find();
-
-  if (searchString) {
-    const orConditions = [
-      { name: { $regex: searchString, $options: "i" } },
-      { email: { $regex: searchString, $options: "i" } },
-      { phoneNumber: { $regex: searchString, $options: "i" } },
-      { role: { $regex: searchString, $options: "i" } },
-    ];
-
-    query = query.or(orConditions);
-  }
-
-  const documents = await query.sort({ createdAt: -1 }).skip(skip).limit(limit);
-
-  const totalDocuments = await User.countDocuments(query.getQuery());
-  console.log(totalDocuments);
-  if (totalDocuments === 0) {
+  const { documents, paginationResult } = await searchService({
+    Model: User,
+    searchString,
+    page,
+    limit,
+  });
+  if (!documents || documents.length === 0) {
     return next(
-      new ApiError(
+      new apiError(
         `No document found for the search string ${searchString}`,
         404,
       ),
     );
   }
-
-  const totalPages = Math.ceil(totalDocuments / limit);
 
   const formattedUsers = documents.map((user) => ({
     name: user.name,

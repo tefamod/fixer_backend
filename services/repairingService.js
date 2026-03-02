@@ -96,6 +96,7 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
   let completedServices = 0;
   let periodicRepairs = 0;
   let nonperiodicRepairs = 0;
+  const const_part_of_id = "2021";
   let complete = false;
   const {
     components,
