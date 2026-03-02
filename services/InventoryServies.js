@@ -3,6 +3,7 @@ const Inventory = require("../models/Inventory");
 const asyncHandler = require("express-async-handler");
 const factory = require("./handlersFactory");
 const apiError = require("../utils/apiError");
+const searchService = require("./searchService");
 
 // @desc add Component
 // @Route GET /api/v1/Inventort
@@ -64,7 +65,21 @@ exports.searchCom = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
   let query = Inventory.find();
-
+  const { documents, paginationResult } = await searchService({
+    Model: Inventory,
+    searchString,
+    page,
+    limit,
+  });
+  if (!documents || documents.length === 0) {
+    return next(
+      new apiError(
+        `No document found for the search string ${searchString}`,
+        404,
+      ),
+    );
+  }
+  /*
   if (searchString) {
     const schema = Inventory.schema;
     const paths = Object.keys(schema.paths);
@@ -81,23 +96,13 @@ exports.searchCom = asyncHandler(async (req, res, next) => {
   }
   const documents = await query.sort({ createdAt: -1 }).skip(skip).limit(limit);
 
-  if (!documents || documents.length === 0) {
-    return next(
-      new apiError(
-        `No document found for the search string ${searchString}`,
-        404,
-      ),
-    );
-  }
+
   const totalDocuments = await Inventory.countDocuments(query.getQuery());
   const totalPages = Math.ceil(totalDocuments / limit);
+*/
   res.status(200).json({
     results: documents.length,
-    paginationResult: {
-      currentPage: page,
-      limit: limit,
-      numberOfPages: totalPages,
-    },
+    paginationResult,
     data: documents,
   });
   /* sortedCategory = documents.sort(

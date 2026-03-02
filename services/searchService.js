@@ -1,34 +1,37 @@
 const searchService = async ({
   Model,
   searchString,
-  searchFields = [],
+  baseFilter = {},
   page = 1,
   limit = 10,
   sort = { createdAt: -1 },
 }) => {
   const skip = (page - 1) * limit;
 
-  let query = Model.find();
+  let mongoQuery = { ...baseFilter };
+  if (searchString) {
+    const stringFields = Object.keys(Model.schema.paths).filter(
+      (path) => Model.schema.paths[path].instance === "String",
+    );
 
-  if (searchString && searchFields.length > 0) {
-    const orConditions = searchFields.map((field) => ({
-      [field]: { $regex: searchString, $options: "i" },
+    mongoQuery.$or = stringFields.map((path) => ({
+      [path]: { $regex: searchString, $options: "i" },
     }));
-
-    query = query.or(orConditions);
   }
 
-  const documents = await query.sort(sort).skip(skip).limit(limit);
+  const documents = await Model.find(mongoQuery)
+    .sort(sort)
+    .skip(skip)
+    .limit(limit);
 
-  const totalDocuments = await Model.countDocuments(query.getQuery());
-  const totalPages = Math.ceil(totalDocuments / limit);
+  const totalDocuments = await Model.countDocuments(mongoQuery);
 
   return {
     documents,
     paginationResult: {
       currentPage: page,
       limit,
-      numberOfPages: totalPages,
+      numberOfPages: Math.ceil(totalDocuments / limit),
       totalDocuments,
     },
   };

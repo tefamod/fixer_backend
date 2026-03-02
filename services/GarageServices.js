@@ -7,7 +7,7 @@ const asyncHandler = require("express-async-handler");
 const factory = require("./handlersFactory");
 const ApiFeatures = require("../utils/apiFeatures");
 const CategoryCode = require("../models/categoryCode");
-
+const searchService = require("./searchService");
 // @desc add car
 // @Route GET /api/v1/Garage
 // @access private
@@ -37,8 +37,8 @@ exports.addCar = asyncHandler(async (req, res, next) => {
       return next(
         new apiError(
           `There is already a car with the same car number ${carNumber}`,
-          400
-        )
+          400,
+        ),
       );
     }
 
@@ -48,8 +48,8 @@ exports.addCar = asyncHandler(async (req, res, next) => {
         return next(
           new apiError(
             `There is already a car with the same chassis number ${chassisNumber}`,
-            400
-          )
+            400,
+          ),
         );
       }
     }
@@ -60,8 +60,8 @@ exports.addCar = asyncHandler(async (req, res, next) => {
         return next(
           new apiError(
             `There is already a car with the same motor number ${motorNumber}`,
-            400
-          )
+            400,
+          ),
         );
       }
     }
@@ -69,7 +69,7 @@ exports.addCar = asyncHandler(async (req, res, next) => {
       const categoryCode = await CategoryCode.findOne({ category: clientType });
       if (!categoryCode) {
         return next(
-          new apiError(`There is no type with this name ${clientType}`, 400)
+          new apiError(`There is no type with this name ${clientType}`, 400),
         );
       }
       const carCode = req.body.carCode;
@@ -84,7 +84,7 @@ exports.addCar = asyncHandler(async (req, res, next) => {
       const categoryCode = await CategoryCode.findOne({ category: clientType });
       if (!categoryCode) {
         return next(
-          new apiError(`There is no type with this name ${clientType}`, 400)
+          new apiError(`There is no type with this name ${clientType}`, 400),
         );
       }
 
@@ -132,8 +132,8 @@ exports.addCar = asyncHandler(async (req, res, next) => {
       return next(
         new apiError(
           "There is no user for this car, you must add user first",
-          404
-        )
+          404,
+        ),
       );
     }
 
@@ -214,7 +214,7 @@ exports.getCars = asyncHandler(async (req, res) => {
   let documents = await mongooseQuery;
 
   documents = documents.sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
   );
 
   res
@@ -265,14 +265,14 @@ exports.getRepairingCars = asyncHandler(async (req, res, next) => {
   let documents = await mongooseQuery;
 
   documents = documents.sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
   );
   const cars = await Car.find(filter);
   if (paginationResult.limit > cars.length) {
     paginationResult.numberOfPages = 1;
   } else {
     paginationResult.numberOfPages = Math.ceil(
-      cars.length / paginationResult.limit
+      cars.length / paginationResult.limit,
     );
   }
   /*let filter2 = { State: "Repair" };
@@ -312,7 +312,7 @@ exports.makeCarInRepair = asyncHandler(async (req, res, next) => {
   const car = await Car.findOneAndUpdate(
     { carNumber },
     { repairing },
-    { new: true }
+    { new: true },
   );
 
   if (!car) {
@@ -334,6 +334,27 @@ exports.searchForallCars = asyncHandler(async (req, res, next) => {
   const { searchString } = req.params;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
+  const { documents, paginationResult } = await searchService({
+    Model: Car,
+    searchString,
+    page,
+    limit,
+  });
+  if (!documents || documents.length === 0) {
+    return next(
+      new apiError(
+        `No document found for the search string ${searchString}`,
+        404,
+      ),
+    );
+  }
+
+  res.status(200).json({
+    results: documents.length,
+    paginationResult,
+    data: documents,
+  });
+  /*
   const skip = (page - 1) * limit;
   let query = Car.find();
 
@@ -341,9 +362,9 @@ exports.searchForallCars = asyncHandler(async (req, res, next) => {
     const schema = Car.schema;
     const paths = Object.keys(schema.paths);
     /*console.log("Path Types:");
-    paths.forEach((path) => {
-      console.log(`${path}: ${schema.paths[path].instance}`);
-    });*/
+    //paths.forEach((path) => {
+    //  console.log(`${path}: ${schema.paths[path].instance}`);
+    //});
     for (let i = 0; i < paths.length; i++) {
       const orConditions = paths
         .filter(
@@ -389,6 +410,7 @@ exports.searchForallCars = asyncHandler(async (req, res, next) => {
     },
     data: documents,
   });
+  */
 });
 
 // @desc    search for reparing cars
@@ -398,56 +420,26 @@ exports.searchForRepairingCars = asyncHandler(async (req, res, next) => {
   const { searchString } = req.params;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
-  const skip = (page - 1) * limit;
 
-  let query = Car.find({ State: "Repair" });
-
-  if (searchString) {
-    const schema = Car.schema;
-    const paths = Object.keys(schema.paths);
-
-    const orConditions = paths
-      .filter(
-        (path) =>
-          schema.paths[path].instance === "String" &&
-          (path === "ownerName" ||
-            path === "carNumber" ||
-            path === "chassisNumber" ||
-            path === "model" ||
-            path === "brand" ||
-            path === "motorNumber" ||
-            path === "generatedCode")
-      )
-      .map((path) => ({
-        [path]: { $regex: searchString, $options: "i" },
-      }));
-
-    query = query.or(orConditions);
-  }
-
-  const documents = await query
-    .sort({ lastRepairDate: -1 })
-    .skip(skip)
-    .limit(limit);
-
+  const { documents, paginationResult } = await searchService({
+    Model: Car,
+    searchString,
+    baseFilter: { State: "Repair" },
+    page,
+    limit,
+  });
   if (!documents || documents.length === 0) {
     return next(
       new apiError(
-        `No document found for the search string "${searchString}"`,
-        404
-      )
+        `No document found for the search string ${searchString}`,
+        404,
+      ),
     );
   }
 
-  const totalDocuments = await Car.countDocuments(query.getQuery());
-  const totalPages = Math.ceil(totalDocuments / limit);
   res.status(200).json({
     results: documents.length,
-    paginationResult: {
-      currentPage: page,
-      limit: limit,
-      numberOfPages: totalPages,
-    },
+    paginationResult,
     data: documents,
   });
 });
