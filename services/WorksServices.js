@@ -37,6 +37,7 @@ exports.searchForWorker = asyncHandler(async (req, res, next) => {
   const { documents, paginationResult } = await searchService({
     Model: Worker,
     searchString,
+    select: "name IdNumber phoneNumber jobTitle salary salaryAfterProcces",
   });
   if (!documents || documents.length === 0) {
     return next(
@@ -47,19 +48,10 @@ exports.searchForWorker = asyncHandler(async (req, res, next) => {
     );
   }
 
-  const formattedData = documents.map((doc) => ({
-    name: doc.name,
-    IdNumber: doc.IdNumber,
-    phoneNumber: doc.phoneNumber,
-    jobTitle: doc.jobTitle,
-    salary: doc.salary,
-    salaryAfterProcces: doc.salaryAfterProcces,
-  }));
-
   res.status(200).json({
     results: documents.length,
     paginationResult,
-    data: formattedData,
+    data: documents,
   });
 });
 

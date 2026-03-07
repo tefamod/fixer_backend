@@ -454,11 +454,12 @@ exports.searchForUser = asyncHandler(async (req, res, next) => {
   const { searchString } = req.params;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
-  const { documents, paginationResult } = await searchService({
+  const { results, paginationResult, documents } = await searchService({
     Model: User,
     searchString,
     page,
     limit,
+    select: "name _id phoneNumber createdAt",
   });
   if (!documents || documents.length === 0) {
     return next(
@@ -469,21 +470,10 @@ exports.searchForUser = asyncHandler(async (req, res, next) => {
     );
   }
 
-  const formattedUsers = documents.map((user) => ({
-    name: user.name,
-    id: user._id,
-    phoneNumber: user.phoneNumber,
-    createdAt: user.createdAt,
-  }));
-
   res.status(200).json({
-    results: formattedUsers.length,
-    paginationResult: {
-      currentPage: page,
-      limit,
-      numberOfPages: totalPages,
-    },
-    data: formattedUsers,
+    results: documents.length,
+    paginationResult,
+    data: documents,
   });
 });
 
