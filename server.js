@@ -35,17 +35,17 @@ if (process.env.NODE_ENV == "development") {
 }
 
 // Routes
-app.use("/api/V1/Inventort", InvRoute);
-app.use("/api/V1/Garage", GarageRoute);
-app.use("/api/V1/User", userRoute);
-app.use("/api/V1/auth", authRoute);
-app.use("/api/V1/repairing", repairingRoute);
-app.use("/api/V1/Home", homeRoute);
-app.use("/api/V1/Worker", workerRoute);
-app.use("/api/V1/MonthlyReport", MonthlyReport);
-app.use("/api/V1/Category", CategoryCode);
-app.use("/api/V1/appVersion", appVersion);
-app.use("/api/V1/color", changeColor);
+app.use("/api/V2/Inventort", InvRoute);
+app.use("/api/V2/Garage", GarageRoute);
+app.use("/api/V2/User", userRoute);
+app.use("/api/V2/auth", authRoute);
+app.use("/api/V2/repairing", repairingRoute);
+app.use("/api/V2/Home", homeRoute);
+app.use("/api/V2/Worker", workerRoute);
+app.use("/api/V2/MonthlyReport", MonthlyReport);
+app.use("/api/V2/Category", CategoryCode);
+app.use("/api/V2/appVersion", appVersion);
+app.use("/api/V2/color", changeColor);
 // ping api
 app.get("/api/ping", (req, res) => {
   res.status(200).send("Server is alive!");
@@ -87,7 +87,7 @@ cron.schedule("*/14 * * * *", () => {
         console.error(
           "Server responded with an error:",
           error.response.status,
-          error.response.data
+          error.response.data,
         );
       } else if (error.request) {
         // No response received
