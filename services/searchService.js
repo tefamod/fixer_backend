@@ -18,11 +18,11 @@ const searchService = async ({
   if (searchString) {
     let fieldsToSearch;
 
-    // لو المستخدم محدد حقول معينة للبحث
+    // لو  محدد حقول معينة للبحث
     if (searchFields.length > 0) {
       fieldsToSearch = searchFields;
     } else {
-      // غير كده يبحث في كل الحقول النصية
+      //  يبحث في كل الحقول النصية
       fieldsToSearch = Object.keys(Model.schema.paths).filter(
         (path) => Model.schema.paths[path].instance === "String",
       );
@@ -37,7 +37,6 @@ const searchService = async ({
 
   let mongooseQuery = Model.find(mongoQuery).sort(sort).skip(skip).limit(limit);
 
-  // select fields
   if (select) {
     mongooseQuery = mongooseQuery.select(select);
   }
