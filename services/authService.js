@@ -6,7 +6,7 @@ const bcrypt = require("bcryptjs");
 const Car = require("../models/Car");
 const asyncHandler = require("express-async-handler");
 const ApiError = require("../utils/apiError");
-const sendEmail = require("../utils/sendEmail");
+const { sendLoginVerificationLink } = require("./emailService");
 const createToken = require("../utils/createToken");
 
 const User = require("../models/userModel");
@@ -148,8 +148,8 @@ exports.protect = asyncHandler(async (req, res, next) => {
     return next(
       new ApiError(
         "You are not login, Please login to get access this route",
-        401
-      )
+        401,
+      ),
     );
   }
 
@@ -162,8 +162,8 @@ exports.protect = asyncHandler(async (req, res, next) => {
     return next(
       new ApiError(
         "The user that belong to this token does no longer exist",
-        401
-      )
+        401,
+      ),
     );
   }
 
@@ -171,15 +171,15 @@ exports.protect = asyncHandler(async (req, res, next) => {
   if (currentUser.passwordChangedAt) {
     const passChangedTimestamp = parseInt(
       currentUser.passwordChangedAt.getTime() / 1000,
-      10
+      10,
     );
     // Password changed after token created (Error)
     if (passChangedTimestamp > decoded.iat) {
       return next(
         new ApiError(
           "User recently changed his password. please login again..",
-          401
-        )
+          401,
+        ),
       );
     }
   }
@@ -196,7 +196,7 @@ exports.allowedTo = (...roles) =>
     // 2) access registered user (req.user.role)
     if (!roles.includes(req.user.role)) {
       return next(
-        new ApiError("You are not allowed to access this route", 403)
+        new ApiError("You are not allowed to access this route", 403),
       );
     }
     next();
@@ -295,123 +295,52 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
     return next(new ApiError("Incorrect email or password", 401));
   }
 
-  const ip = req.connection.remoteAddress;
-  const userAgent = req.headers["user-agent"];
   if (user.vertified === false) {
     if (email !== "admin") {
       const token = generateUniqueToken();
-      const link = `https://fixer-backend-rtw4.onrender.com/api/V1/auth/admin/verifyLogin?token=${token}`;
-      // Store the token with expiration time (1 hour)
-      tokenStore[token] = { email, expiresAt: Date.now() + 3600000 };
+      const link = `https://test-fixer.onrender.com/api/V2/auth/admin/verifyLogin?token=${token}`;
 
-      const message = `Hello ${user.name},\n\nClick the following link to login:\n${link}\n\nNote: This link will expire in 1 hour.\n\nBest regards,\nThe Car Service Center Team`;
+      // Store the token with expiration time (1 hour)
+      user.loginToken = {
+        token,
+        expiresAt: new Date(Date.now() + 3600000),
+      };
+      await user.save({ validateBeforeSave: false });
 
       try {
-        // Send email with login link
-        await sendEmail({
+        await sendLoginVerificationLink({
           email,
-          subject: "Login Verification",
-          message,
-          html: `
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Car Fixing Center</title>
-              <style>
-                  /* Reset some default browser styles */
-                  body, h1, p {
-                      margin: 0;
-                      padding: 0;
-                  }
-                  
-                  body {
-                      font-family: Arial, sans-serif;
-                      background-color: #fff68b1e;
-                      color: #333;
-                  }
-                  
-                  .container {
-                      max-width: 800px;
-                      margin: 0 auto;
-                      padding: 20px;
-                      background-color: #fff;
-                      border-radius: 5px;
-                      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                  }
-                  
-                  h1 {
-                      color: #f68b1e;
-                      margin-bottom: 20px;
-                      text-align: center;
-                  }
-                  
-                  p {
-                      margin-bottom: 20px;
-                  }
-                  
-                  .login-button {
-                      display: block;
-                      width: 200px;
-                      margin: 0 auto;
-                      padding: 10px;
-                      background-color: #f68b1e;
-                      color: white;
-                      text-align: center;
-                      border: none;
-                      border-radius: 5px;
-                      text-decoration: none;
-                      font-size: 16px;
-                  }
-                  
-                  .footer {
-                      background-color: #f0f2f5;
-                      text-align: center;
-                      padding: 10px;
-                      border-top: 1px solid #ddd;
-                      border-radius: 0 0 8px 8px;
-                  }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <img src="https://raw.githubusercontent.com/joeshwoa/fixer_system/main/assets/images/51.png" alt="Logo" style="display: block; margin: 0 auto; max-width: 200px; margin-bottom: 20px;">
-                  <h1>Car Fixing Center</h1>
-                  <p>Click the button below to login. Note: This link will expire in 1 hour.</p>
-                  <a href="${link}" class="login-button">Login</a>
-              </div>
-              <div class="footer">
-                  &copy; 2024 Car Fixing Center. All rights reserved.
-              </div>
-          </body>
-          </html>`,
+          userName: user.name,
+          link,
         });
       } catch (err) {
         return next(new ApiError("There was an error in sending email", 500));
       }
 
-      res.status(200).json({ message: "Login link sent to your email" });
+      return res.status(200).json({ message: "Login link sent to your email" });
     } else {
       const token = createToken({ userId: user._id });
-
       delete user._doc.password;
       user.vertified = false;
-      await user.save();
+      user.loginToken = {
+        token,
+        expiresAt: new Date(Date.now() + 3600000),
+      };
+      await user.save({ validateBeforeSave: false });
       delete user._doc.vertified;
-      res.status(200).json({ data: { user }, token });
+      return res.status(200).json({ data: { user }, token });
     }
   } else {
     const token = createToken({ userId: user._id });
-
     delete user._doc.password;
-    ///////////////////////////////////////////////////////////////////////////
-    // change the vertified before the final submition
-    //////////////////////////////////////////////////////////////////////////
     user.vertified = false;
-    await user.save();
+    user.loginToken = {
+      token,
+      expiresAt: new Date(Date.now() + 3600000),
+    };
+    await user.save({ validateBeforeSave: false });
     delete user._doc.vertified;
-    res.status(200).json({ data: { user }, token });
+    return res.status(200).json({ data: { user }, token });
   }
 });
 
@@ -419,20 +348,31 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
 exports.verifyLogin = asyncHandler(async (req, res, next) => {
   const { token } = req.query;
 
-  // Check if token exists in tokenStore and not expired
-  if (!tokenStore[token] || Date.now() > tokenStore[token].expiresAt) {
-    return next(new ApiError("Login link is invalid or expired", 401));
+  // 3. Find user
+
+  const user = await User.findOne({ "loginToken.token": token });
+
+  if (!user) {
+    return next(new ApiError("Login link is invalid", 401));
   }
 
-  const { email } = tokenStore[token];
-  const user = await User.findOne({ email });
-  if (!user.vertified) {
-    user.vertified = true;
+  if (Date.now() > user.loginToken.expiresAt.getTime()) {
+    user.loginToken = { token: null, expiresAt: null };
+    await user.save({ validateBeforeSave: false });
+    return next(new ApiError("Login link has expired", 401));
   }
-  await user.save();
-  delete tokenStore[token];
 
-  res.status(200).json({ message: "Login successful" });
+  // verify
+  user.vertified = true;
+  user.loginToken = { token: null, expiresAt: null };
+  await user.save({ validateBeforeSave: false });
+
+  const authToken = createToken({ userId: user._id });
+
+  res.status(200).json({
+    message: "Login successful",
+    token: authToken,
+  });
 });
 
 // @desc    Forgot password for admin
@@ -585,7 +525,7 @@ exports.setEmailAndPassword = asyncHandler(async (req, res, next) => {
 
   if (!user) {
     return next(
-      new ApiError("there is no email with admin name in the system", 404)
+      new ApiError("there is no email with admin name in the system", 404),
     );
   }
 

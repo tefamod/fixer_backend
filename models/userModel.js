@@ -75,6 +75,10 @@ const userSchema = new mongoose.Schema(
           type: String,
           required: [true, "model is required"],
         },
+        loginToken: {
+          token: { type: String, default: null },
+          expiresAt: { type: Date, default: null },
+        },
       },
     ],
     vertified: {
@@ -82,7 +86,7 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 //userSchema.pre("save", async function (next) {
