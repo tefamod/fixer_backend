@@ -42,7 +42,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-
+    loginToken: {
+      token: { type: String, default: null },
+      expiresAt: { type: Date, default: null },
+    },
     phoneNumber: {
       type: String,
       //required: [true, "phoneNumber is required"],
@@ -74,10 +77,6 @@ const userSchema = new mongoose.Schema(
         model: {
           type: String,
           required: [true, "model is required"],
-        },
-        loginToken: {
-          token: { type: String, default: null },
-          expiresAt: { type: Date, default: null },
         },
       },
     ],
