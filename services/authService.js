@@ -310,14 +310,14 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
       await sendLoginVerificationLink({ email, userName: user.name, link });
       console.log("Verification link sent to email");
     } catch (err) {
+      console.log(err);
       return next(new ApiError("There was an error in sending email", 500));
     }
   }
-  let authToken = null;
+
   // ── verified user OR admin → login directly ──
-  if (user.role === "admin") {
-    authToken = createToken({ userId: user._id });
-  }
+
+  const authToken = createToken({ userId: user._id });
 
   delete user._doc.password;
   delete user._doc.vertified;
