@@ -295,65 +295,49 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
     return next(new ApiError("Incorrect email or password", 401));
   }
 
-  if (user.vertified === false) {
-    if (email !== "admin") {
-      const token = generateUniqueToken();
-      const link = `https://test-fixer.onrender.com/api/V2/auth/admin/verifyLogin?token=${token}`;
+  if (user.vertified === false && email !== "admin") {
+    // ── unverified user → send verification link ──
+    const verifyToken = generateUniqueToken();
+    const link = `https://test-fixer.onrender.com/api/V2/auth/admin/verifyLogin?token=${verifyToken}`;
 
-      // Store the token with expiration time (1 hour)
-      user.loginToken = {
-        token,
-        expiresAt: new Date(Date.now() + 3600000),
-      };
-      await user.save({ validateBeforeSave: false });
-
-      try {
-        await sendLoginVerificationLink({
-          email,
-          userName: user.name,
-          link,
-        });
-      } catch (err) {
-        return next(new ApiError("There was an error in sending email", 500));
-      }
-
-      return res.status(200).json({ message: "Login link sent to your email" });
-    } else {
-      const token = createToken({ userId: user._id });
-      delete user._doc.password;
-      user.vertified = false;
-      user.loginToken = {
-        token,
-        expiresAt: new Date(Date.now() + 3600000),
-      };
-      await user.save({ validateBeforeSave: false });
-      delete user._doc.vertified;
-      return res.status(200).json({ data: { user }, token });
-    }
-  } else {
-    const token = createToken({ userId: user._id });
-    delete user._doc.password;
-    user.vertified = false;
     user.loginToken = {
-      token,
+      token: verifyToken,
       expiresAt: new Date(Date.now() + 3600000),
     };
     await user.save({ validateBeforeSave: false });
-    delete user._doc.vertified;
-    return res.status(200).json({ data: { user }, token });
+
+    try {
+      await sendLoginVerificationLink({ email, userName: user.name, link });
+      console.log("Verification link sent to email");
+    } catch (err) {
+      return next(new ApiError("There was an error in sending email", 500));
+    }
   }
+  let authToken = null;
+  // ── verified user OR admin → login directly ──
+  if (user.role === "admin") {
+    authToken = createToken({ userId: user._id });
+  }
+
+  delete user._doc.password;
+  delete user._doc.vertified;
+  return res.status(200).json({
+    message: "Login link sent to your email",
+    data: { user },
+    token: authToken,
+  });
 });
 
 // Verification route for login
 exports.verifyLogin = asyncHandler(async (req, res, next) => {
   const { token } = req.query;
 
-  // 3. Find user
+  // Find user
 
   const user = await User.findOne({ "loginToken.token": token });
-
+  console.log(user);
   if (!user) {
-    return next(new ApiError("Login link is invalid", 401));
+    return next(new ApiError("User token not found", 404));
   }
 
   if (Date.now() > user.loginToken.expiresAt.getTime()) {
