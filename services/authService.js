@@ -6,7 +6,12 @@ const bcrypt = require("bcryptjs");
 const Car = require("../models/Car");
 const asyncHandler = require("express-async-handler");
 const ApiError = require("../utils/apiError");
-const { sendLoginVerificationLink } = require("./emailService");
+const {
+  sendLoginVerificationLink,
+  sendTemporaryPassword,
+  sendCarCredentials,
+  sendOtp,
+} = require("./emailService");
 const createToken = require("../utils/createToken");
 
 const User = require("../models/userModel");
@@ -72,20 +77,17 @@ exports.signup = asyncHandler(async (req, res, next) => {
   // 2- Generate token
   const token = createToken(user._id);
   // 3) Send the reset code via email
-  const message = `Dear ${user.name},\n\nYour car has been successfully registered with us.\n\nHere are your credentials:\ncar Code: ${newCar.generatedCode}\nPassword: ${newCar.generatedPassword}\n\nThank you for choosing our service.\n\nBest regards,\nThe Car Service Center Team`;
   try {
-    await sendEmail({
+    await sendCarCredentials({
       email: user.email,
-      subject: "Your password",
-      message,
+      ownerName: user.name,
+      generatedCode: newCar.generatedCode,
+      generatedPassword: newCar.generatedPassword,
     });
-    res
-      .status(200)
-      .json({ status: "Success", message: "Reset code sent to email" });
   } catch (err) {
     return next(new ApiError("There is an error in sending email", 500));
   }
-  res.status(201).json({ data: user, token });
+  return res.status(201).json({ data: user, token });
 });
 
 // @desc    Login using car code
@@ -225,52 +227,19 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
   if (!carNumber) {
     return next(new ApiError("No car found for the given carCode", 404));
   }
-  /*
-  // Find the car by carNumber
-  const car = await Car.findOne({ carNumber });
-
-  if (!car) {
-    return next(new ApiError("No car found for the given carCode", 404));
-  }*/
-
-  //const { carNumber } = req.body;
-
-  //if (!(car.carNumber === carNumber)) {
-  //  return next(new ApiError(`there is no car with this number`, 404));
-  //}
-  //console.log(user.carCode);
-  //console.log(user.password);
-  //oldPassword = crypto.de(user.password);
-  //console.log(oldPassword);
-  // 2) If user exist, Generate hash reset random 6 digits and save it in db
-  //const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-  //const hashedpassword = crypto
-  //  .createHash("sha256")
-  //  .update(user.password)
-  //  .digest("hex");
-
-  // Save hashed password reset code into db
-  //user.passwordResetCode = hashedResetCode;
-  // Add expiration time for password reset code (10 min)
-  //user.passwordResetExpires = Date.now() + 10 * 60 * 1000;
-  //user.passwordResetVerified = false;
-
-  //await user.save();
-  // 3) Send the reset code via email
-  const message = `Dear ${user.name},\n\nHere are your credentials:\ncar Code: ${carcode}\nPassword: ${user.password}\n\nThank you for choosing our service.\n\nBest regards,\nThe Car Service Center Team`;
   try {
-    await sendEmail({
+    await sendTemporaryPassword({
       email: user.email,
-      subject: "Your old password",
-      message,
+      ownerName: user.name,
+      carCode: carcode,
+      password: user.password,
     });
+
     res
       .status(200)
       .json({ status: "Success", message: "Reset code sent to email" });
   } catch (err) {
-    //user.passwordResetCode = undefined;
-    //user.passwordResetExpires = undefined;
-    //user.passwordResetVerified = undefined;
+    console.log(err);
 
     await user.save({ validateBeforeSave: false });
     return next(new ApiError("There is an error in sending email", 500));
@@ -291,12 +260,12 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
-  if (!user || !(password == user.password)) {
+  if (!user || password !== user.password) {
     return next(new ApiError("Incorrect email or password", 401));
   }
 
+  // ── unverified → send verification link ──
   if (user.vertified === false && email !== "admin") {
-    // ── unverified user → send verification link ──
     const verifyToken = generateUniqueToken();
     const link = `https://test-fixer.onrender.com/api/V2/auth/admin/verifyLogin?token=${verifyToken}`;
 
@@ -308,34 +277,30 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
 
     try {
       await sendLoginVerificationLink({ email, userName: user.name, link });
-      console.log("Verification link sent to email");
     } catch (err) {
-      console.log(err);
       return next(new ApiError("There was an error in sending email", 500));
     }
+
+    return res.status(200).json({
+      message: "Verification link sent to your email",
+    });
   }
 
-  // ── verified user OR admin → login directly ──
-
   const authToken = createToken({ userId: user._id });
-
   delete user._doc.password;
   delete user._doc.vertified;
+
   return res.status(200).json({
-    message: "Login link sent to your email",
+    message: "Login successful",
     data: { user },
     token: authToken,
   });
 });
 
-// Verification route for login
 exports.verifyLogin = asyncHandler(async (req, res, next) => {
   const { token } = req.query;
 
-  // Find user
-
   const user = await User.findOne({ "loginToken.token": token });
-  console.log(user);
   if (!user) {
     return next(new ApiError("User token not found", 404));
   }
@@ -346,15 +311,17 @@ exports.verifyLogin = asyncHandler(async (req, res, next) => {
     return next(new ApiError("Login link has expired", 401));
   }
 
-  // verify
   user.vertified = true;
   user.loginToken = { token: null, expiresAt: null };
   await user.save({ validateBeforeSave: false });
 
   const authToken = createToken({ userId: user._id });
+  delete user._doc.password;
+  delete user._doc.vertified;
 
-  res.status(200).json({
+  return res.status(200).json({
     message: "Login successful",
+    data: { user },
     token: authToken,
   });
 });
@@ -377,97 +344,19 @@ exports.forgotPasswordForAdmin = asyncHandler(async (req, res, next) => {
   });
 
   user.passwordResetCode = otp;
-  await user.save();
-
-  // Compose email message with the OTP
-  const message = `Dear ${user.name},\n\nHere is your OTP for resetting the password: ${otp}\n\nBest regards,\nThe Car Service Center Team`;
+  await user.save({ validateBeforeSave: false });
 
   try {
-    // Send email with OTP
-    await sendEmail({
+    await sendOtp({
       email: user.email,
-      subject: "Reset Password OTP",
-      message,
-      html: `
-      <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Password OTP</title>
-    <style>
-        /* Reset some default browser styles */
-        body, h1, p {
-            margin: 0;
-            padding: 0;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #1c1e21;
-        }
-        
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        h1 {
-            color: #f68b1e;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        p {
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
-        
-        .otp-code {
-            background-color: #f68b1e; /* Adjusted color */
-            padding: 10px 20px;
-            border-radius: 5px;
-            text-align: center;
-            font-size: 18px;
-            margin-bottom: 20px;
-            color: white; /* Adjusted text color */
-        }
-        
-        .footer {
-            background-color: #f0f2f5;
-            text-align: center;
-            padding: 10px;
-            border-top: 1px solid #ddd;
-            border-radius: 0 0 8px 8px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <img src="https://raw.githubusercontent.com/joeshwoa/fixer_system/main/assets/images/51.png" alt="Logo" style="display: block; margin: 0 auto; max-width: 200px; margin-bottom: 20px;">
-        <h1>Reset Password OTP</h1>
-        <p>Dear ${user.name},</p>
-        <p>Here is your OTP for resetting the password:</p>
-        <div class="otp-code">${otp}</div>
-        <p>Please use this OTP to proceed with the password reset.</p>
-        <p>If you did not request a password reset, please ignore this email.</p>
-        <p>Best regards,<br>The Car Service Center Team</p>
-    </div>
-    <div class="footer">
-        &copy; 2024 Car Service Center. All rights reserved.
-    </div>
-</body>
-</html>
-`,
+      userName: user.name,
+      otp,
     });
-
-    res.status(200).json({ status: "Success", message: "OTP sent to email" });
+    return res
+      .status(200)
+      .json({ status: "Success", message: "OTP sent to email" });
   } catch (err) {
+    console.log(err);
     return next(new ApiError("There was an error in sending email", 500));
   }
 });
@@ -490,7 +379,7 @@ exports.resetPasswordForAdmin = asyncHandler(async (req, res, next) => {
 
   user.password = newPassword;
   user.passwordResetCode = undefined;
-  await user.save();
+  await user.save({ validateBeforeSave: false });
 
   res
     .status(200)
