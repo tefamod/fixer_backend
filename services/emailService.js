@@ -68,10 +68,11 @@ exports.sendCarCredentials = async ({
     html: emailLayout(`
       <h1>Welcome to Fixer!</h1>
       <p>Dear ${ownerName},</p>
-      <p>Your car has been successfully registered. Here are your credentials:</p>
-      <div class="box">Car Code: ${generatedCode}</div>
-      <div class="box">Password: ${generatedPassword}</div>
-      <p>Please keep these credentials safe.</p>
+      <p>Here are your credentials:</p>
+      <div style="display:flex; gap:10px; margin-bottom:14px;">
+      <div class="box" style="flex:1; margin:0;">Car Code: ${generatedCode} <br/> Password: ${generatedPassword}</div>
+      </div>
+      <p style="margin-top:14px;">If you did not request this, please ignore this email.</p>
       <p>Best regards,<br>The Car Service Center Team</p>
     `),
   });
