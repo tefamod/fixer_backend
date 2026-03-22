@@ -10,9 +10,10 @@ const createToken = require("../utils/createToken");
 const User = require("../models/userModel");
 const Car = require("../models/Car");
 const ApiFeatures = require("../utils/apiFeatures");
-const sendEmail = require("../utils/sendEmail");
+const { sendCarCredentials } = require("./emailService");
 const CategoryCode = require("../models/categoryCode");
 const searchService = require("./searchService");
+const { send } = require("process");
 // Function to generate a unique 8-digit code
 const generateUniqueCode = async () => {
   let isUnique = false;
@@ -31,97 +32,6 @@ const generateUniqueCode = async () => {
   return code;
 };
 
-const Emailsender = async ({ name, email, newCarCode, generatedPassword }) => {
-  const message = `Dear ${name},\n\nYour car has been successfully registered with us.\n\nHere are your credentials:\ncar Code: ${newCarCode}\nPassword: ${generatedPassword}\n\nThank you for choosing our service.\n\nBest regards,\nThe Car Service Center Team`;
-  try {
-    await sendEmail({
-      email: email,
-      subject: "Your password",
-      message,
-      html: `
-      <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Car Registration Details</title>
-    <style>
-        
-        body, h1, p {
-            margin: 0;
-            padding: 0;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f8f8f8;
-            color: #333;
-        }
-        
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        h1 {
-            color: #f68b1e;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        p {
-            margin-bottom: 20px;
-            line-height: 1.6;
-            
-        }
-        
-        .credentials {
-            background-color: #f68b1e;
-            padding: 15px;
-            color: white;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .credentials p {
-          color: white; 
-      }
-        .footer {
-            background-color: #f8f8f8;
-            text-align: center;
-            padding: 10px;
-            border-top: 1px solid #ddd;
-            border-radius: 0 0 8px 8px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <img src="https://raw.githubusercontent.com/joeshwoa/fixer_system/main/assets/images/51.png" alt="Logo" style="display: block; margin: 0 auto; max-width: 200px; margin-bottom: 20px;">
-        <h1>Car Registration Details</h1>
-        <p>Dear ${name},</p>
-        <p>Your car has been successfully registered with us.</p>
-        <div class="credentials">
-            <p><strong>Car Code:</strong> ${newCarCode}</p>
-            <p><strong>Password:</strong> ${generatedPassword}</p>
-        </div>
-        <p>Thank you for choosing our service.</p>
-        <p>Best regards,<br>The Car Service Center Team</p>
-    </div>
-    <div class="footer">
-        &copy; 2024 Car Service Center. All rights reserved.
-    </div>
-</body>
-</html>
-`,
-    });
-  } catch (err) {
-    console.log("There is an error in sending email", err);
-  }
-};
 // @desc    Get list of users
 // @route   GET /api/v1/users
 // @access  Private/Admin
@@ -313,10 +223,10 @@ exports.createUser = asyncHandler(async (req, res, next) => {
   const token = createToken(user._id);
   try {
     // 3) Send the reset code via email
-    await Emailsender({
-      name: req.body.name,
+    await sendCarCredentials({
       email: req.body.email,
-      newCarCode,
+      ownerName: req.body.name,
+      generatedCode: newCarCode,
       generatedPassword,
     });
   } catch (err) {
