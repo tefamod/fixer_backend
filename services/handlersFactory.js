@@ -22,11 +22,11 @@ exports.updateOne = (Model) =>
 
     if (!document) {
       return next(
-        new apiError(`No document for this id ${req.params.id}`, 404)
+        new apiError(`No document for this id ${req.params.id}`, 404),
       );
     }
     // Trigger "save" event when update document
-    document.save();
+    document.save({ validateBeforeSave: false });
     res.status(200).json({ data: document });
   });
 
@@ -72,7 +72,7 @@ exports.getAll = (Model, modelName = "") =>
     let documents = await mongooseQuery;
 
     documents = documents.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
     );
 
     res

@@ -14,6 +14,7 @@ const { sendCarCredentials } = require("./emailService");
 const CategoryCode = require("../models/categoryCode");
 const searchService = require("./searchService");
 const { send } = require("process");
+const { STATES } = require("mongoose");
 // Function to generate a unique 8-digit code
 const generateUniqueCode = async () => {
   let isUnique = false;
@@ -351,15 +352,6 @@ exports.updateLoggedUserData = asyncHandler(async (req, res, next) => {
   res.status(200).json({ data: updatedUser });
 });
 
-// @desc    Deactivate logged user
-// @route   DELETE /api/v1/users/deleteMe
-// @access  Private/Protect
-exports.deleteLoggedUserData = asyncHandler(async (req, res, next) => {
-  await User.findByIdAndUpdate(req.user._id, { active: false });
-
-  res.status(204).json({ status: "Success" });
-});
-
 exports.searchForUser = asyncHandler(async (req, res, next) => {
   const { searchString } = req.params;
   const page = parseInt(req.query.page) || 1;
@@ -474,4 +466,24 @@ exports.suggestNextCodeNumber = asyncHandler(async (req, res, next) => {
     newCarCode = 1;
   }
   res.status(200).json({ data: newCarCode });
+});
+// @doc    delte user from the database
+// @route   delte /api/v1/users/delte/:id
+// @access  Private
+exports.deleteUser = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const user = await User.findById(id);
+  if (!user) {
+    return next(new ApiError(`Can't find user for this id ${id}`, 404));
+  }
+  if (user.car.length) {
+    for (let i = 0; i < user.car.length; i++) {
+      let car = await Car.findOneAndDelete({
+        generatedCode: user.car[i].carCode,
+      });
+    }
+  }
+  await user.deleteOne();
+
+  res.status(204).json({ STATES: "the user is deleted" });
 });
