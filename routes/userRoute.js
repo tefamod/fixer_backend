@@ -20,7 +20,7 @@ const {
   getLoggedUserData,
   updateLoggedUserPassword,
   updateLoggedUserData,
-  deleteLoggedUserData,
+  deleteUser,
 } = require("../services/userService");
 const { uploadSingleImage } = require("../middlewares/uploadImageMiddleware");
 const {
@@ -44,7 +44,7 @@ router.use(authService.allowedTo("admin"));
 router.put(
   "/changePassword/:id",
   changeUserPasswordValidator,
-  changeUserPassword
+  changeUserPassword,
 );
 router
   .route("/")
@@ -58,8 +58,10 @@ router
     uploadSingleImage("image"),
     UpdateUserImage,
     updateUserValidator,
-    updateUser
-  );
+    updateUser,
+  )
+  .delete(deleteUserValidator, deleteUser);
+
 router.route("/active/:id").put(makeUserUnactive);
 router.route("/search/:searchString").get(searchForUser);
 router.route("/carCode/:clientType").get(suggestNextCodeNumber);
