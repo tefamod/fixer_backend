@@ -29,7 +29,12 @@ dbconnection();
 // express app
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  }),
+);
 app.options("*", cors());
 // middlewaers
 app.use(express.json());
