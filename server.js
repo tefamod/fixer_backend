@@ -1,3 +1,4 @@
+const cors = require("cors");
 const express = require("express");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
@@ -27,6 +28,9 @@ const getCarImage = require("./routes/getCarImageRoute");
 dbconnection();
 // express app
 const app = express();
+
+app.use(cors());
+app.options("*", cors());
 // middlewaers
 app.use(express.json());
 // eslint-disable-next-line eqeqeq
