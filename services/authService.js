@@ -275,11 +275,9 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
     };
     await user.save({ validateBeforeSave: false });
 
-    try {
-      await sendLoginVerificationLink({ email, userName: user.name, link });
-    } catch (err) {
-      return next(new ApiError("There was an error in sending email", 500));
-    }
+    sendLoginVerificationLink({ email, userName: user.name, link }).catch(
+      (err) => console.error("Email sending failed:", err.message),
+    );
 
     return res.status(200).json({
       message: "Verification link sent to your email",

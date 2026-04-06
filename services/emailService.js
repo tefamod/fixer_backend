@@ -1,13 +1,22 @@
 const nodemailer = require("nodemailer");
 
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  pool: true,
+  maxConnections: 5,
+  auth: {
+    user: "fixer.car.service.center@gmail.com",
+    pass: process.env.Send_Email_pass,
+  },
+});
+
+// Verify connection on startup
+transporter.verify((err) => {
+  if (err) console.error("❌ Email transporter error:", err.message);
+  else console.log("✅ Email transporter ready");
+});
+
 const sendEmail = async ({ email, subject, message, html }) => {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: "fixer.car.service.center@gmail.com",
-      pass: process.env.Send_Email_pass,
-    },
-  });
   await transporter.sendMail({
     from: '"Car Service Center" <fixer.car.service.center@gmail.com>',
     to: email,
