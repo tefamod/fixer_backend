@@ -60,7 +60,6 @@ const emailLayout = (bodyContent) => `
       ${bodyContent}
     </div>
     <div class="footer">&copy; 2024-2026 Car Service Center. All rights reserved.</div>
->>>>>>> d363ecf (email sender for free render)
   </div>
 </body>
 </html>`;
