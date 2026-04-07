@@ -286,7 +286,6 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
 
   const authToken = createToken({ userId: user._id });
   delete user._doc.password;
-  delete user._doc.vertified;
 
   return res.status(200).json({
     message: "Login successful",

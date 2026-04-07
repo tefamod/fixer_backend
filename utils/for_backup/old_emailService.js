@@ -1,29 +1,33 @@
-const SibApiV3Sdk = require("sib-api-v3-sdk");
+require("dotenv").config({ path: "config.env" });
+const nodemailer = require("nodemailer");
 
-const defaultClient = SibApiV3Sdk.ApiClient.instance;
-const apiKey = defaultClient.authentications["api-key"];
-apiKey.apiKey = process.env.BREVO_API_KEY.trim();
+// ✅ Create transporter ONCE — not on every email call
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // ✅ SSL is faster than TLS
+  pool: true, // ✅ reuse connections instead of creating new one each time
+  maxConnections: 5,
+  maxMessages: 100,
+  auth: {
+    user: "fixer.car.service.center@gmail.com",
+    pass: process.env.Send_Email_pass,
+  },
+});
 
-const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+// Verify connection once on startup
+transporter.verify((err) => {
+  if (err) console.error("❌ Email transporter error:", err.message);
+});
 
-const sendEmail = async ({ email, subject, html, text }) => {
-  try {
-    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-
-    sendSmtpEmail.sender = {
-      name: "Car Service Center",
-      email: "cominde.tech@gmail.com",
-    };
-    sendSmtpEmail.to = [{ email }];
-    sendSmtpEmail.subject = subject;
-    sendSmtpEmail.htmlContent = html;
-    if (text) sendSmtpEmail.textContent = text;
-
-    const res = await apiInstance.sendTransacEmail(sendSmtpEmail);
-    return res;
-  } catch (err) {
-    throw err;
-  }
+const sendEmail = async ({ email, subject, message, html }) => {
+  await transporter.sendMail({
+    from: '"Car Service Center" <fixer.car.service.center@gmail.com>',
+    to: email,
+    subject,
+    text: message,
+    html,
+  });
 };
 
 // ── Shared layout ──────────────────────────────────────────
@@ -59,8 +63,7 @@ const emailLayout = (bodyContent) => `
     <div class="body">
       ${bodyContent}
     </div>
-    <div class="footer">&copy; 2024-2026 Car Service Center. All rights reserved.</div>
->>>>>>> d363ecf (email sender for free render)
+    <div class="footer">&copy; 2026 Car Service Center. All rights reserved.</div>
   </div>
 </body>
 </html>`;
@@ -120,9 +123,7 @@ exports.sendLoginVerificationLink = async ({ email, userName, link }) => {
       <h1>Login Verification</h1>
       <p>Hello ${userName},</p>
       <p>Click the button below to verify your login. This link expires in <strong>1 hour</strong>.</p>
-
-      <a href="${link}" class="btn">Verify &amp; Login</a>
-
+      <a href="${link}" class="btn">Verify & Login</a>
       <p style="margin-top:14px;">If you did not request this, please ignore this email.</p>
       <p>Best regards,<br>The Car Service Center Team</p>
     `),
