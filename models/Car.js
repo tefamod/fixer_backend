@@ -5,6 +5,12 @@ const carSchema = new mongoose.Schema({
   ownerName: {
     type: String,
   },
+  image: {
+    type: String,
+  },
+  imagePublicId: {
+    type: String,
+  },
   carNumber: {
     type: String,
     required: [true, "Car Number is required"],

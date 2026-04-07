@@ -372,3 +372,49 @@ exports.deleteCar = asyncHandler(async (req, res, next) => {
     res.status(200).json({ message: "User and car deleted successfully" });
   }
 });
+
+// @desc    get unique brands of car
+// @route   get /api/v2/getCarsInDB?brand&category&model&color
+// @access  public
+exports.getUniqueBrands = asyncHandler(async (req, res, next) => {
+  const { brand, category, model, color } = req.query;
+
+  const cleanResults = (arr) => [
+    ...new Set(
+      arr
+        .map((item) => item.replace(/^[-\s]+|[-\s]+$/g, "").trim())
+        .filter((item) => item !== ""),
+    ),
+  ];
+
+  if (!brand) {
+    const uniqueBrands = await Car.distinct("brand");
+    return res.status(200).json({ data: cleanResults(uniqueBrands) });
+  }
+
+  if (brand && !category) {
+    const uniqueCategories = await Car.distinct("category", { brand });
+    return res.status(200).json({ data: cleanResults(uniqueCategories) });
+  }
+
+  if (brand && category && !model) {
+    const uniqueModels = await Car.distinct("model", { brand, category });
+    return res.status(200).json({ data: cleanResults(uniqueModels) });
+  }
+
+  if (brand && category && model && !color) {
+    const uniqueColors = await Car.distinct("color", {
+      brand,
+      category,
+      model,
+    });
+    return res.status(200).json({ data: cleanResults(uniqueColors) });
+  }
+
+  if (brand && category && model && color) {
+    const cars = await Car.find({ brand, category, model, color });
+    return res.status(200).json({ data: cars });
+  }
+
+  return next(new apiError("enter the car details", 400));
+});
