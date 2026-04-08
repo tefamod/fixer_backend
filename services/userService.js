@@ -51,8 +51,8 @@ exports.getUsers = asyncHandler(async (req, res) => {
     .limitFields();
 
   const users = await User.find(filter);
-
-  let { mongooseQuery, paginationResult } = apiFeatures;
+  const mongooseQuery = apiFeatures.mongooseQuery;
+  const paginationResult = apiFeatures.paginationResult;
   const documents = await mongooseQuery;
   const formattedUsers = documents.map((document) => {
     const formattedUser = {
