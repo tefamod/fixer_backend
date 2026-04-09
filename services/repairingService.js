@@ -2,6 +2,7 @@ const Inventory = require("../models/Inventory");
 const Repairing = require("../models/repairingModel");
 const Car = require("../models/Car");
 const User = require("../models/userModel");
+const { sendNotification } = require("../utils/notifications/notService.js");
 //const slugify = require("slugify");
 const factory = require("./handlersFactory");
 const apiError = require("../utils/apiError");
@@ -503,6 +504,16 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
     } else {
       car.State = "Good";
     }
+    /////////////////////////////////////////////////////////////////
+    // notifications
+    ////////////////////////////////////////////////////////////////
+    const user = await User.findOne({ name: car.ownerName });
+    await sendNotification({
+      userId: user._id,
+      title: "Car Repaired",
+      message: `your Car with number ${repairingDoc.carNumber} is ${car.State} in Fixer Center`,
+      type: "REPAIR_DONE",
+    });
   } else {
     car.State = "Repair";
     car.repairing = true;
@@ -526,23 +537,19 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
 exports.getAllComRepairs = asyncHandler(async (req, res, next) => {
   let filter = { complete: true };
 
-  // 👇 limit ثابت 50
   req.query.limit = 50;
 
-  // احسب عدد المستندات قبل أي فلتر
   const documentsCounts = await Repairing.countDocuments(filter);
 
-  // استخدم ApiFeatures لكل الخصائص: filter, search, limitFields, sort
   const apiFeatures = new ApiFeatures(Repairing.find(filter), req.query)
     .filter()
     .search()
     .limitFields()
     .sort()
-    .paginate(documentsCounts); // paginate آخر حاجة
+    .paginate(documentsCounts);
 
   const repairs = await apiFeatures.mongooseQuery;
 
-  // جلب العربيات الموجودة
   const carNumbers = repairs.map((repair) => repair.carNumber);
   const cars = await Car.find({ carNumber: { $in: carNumbers } });
 
@@ -551,7 +558,6 @@ exports.getAllComRepairs = asyncHandler(async (req, res, next) => {
     carMap[car.carNumber] = car;
   });
 
-  // دمج بيانات الـ repair مع العربية (ولو العربية اتمسحت يرجع null)
   const enrichedRepairs = repairs.map((repair) => {
     const car = carMap[repair.carNumber];
 
@@ -564,7 +570,7 @@ exports.getAllComRepairs = asyncHandler(async (req, res, next) => {
       carCode: car?.generatedCode || null,
       paidOn: repair.updatedAt,
       id: repair._id,
-      carDeleted: !car, // لو العربية اتمسحت
+      carDeleted: !car,
     };
   });
 
@@ -935,6 +941,18 @@ exports.updateRepair = asyncHandler(async (req, res, next) => {
           return next(
             new apiError(`No car for this number ${repair.carNumber}`, 404),
           );
+        }
+        /////////////////////////////////////////////////////////////////
+        // notifications
+        ////////////////////////////////////////////////////////////////
+        if (state === "Good" || state === "Need to check") {
+          const user = await User.findOne({ name: car_state.ownerName });
+          await sendNotification({
+            userId: user._id,
+            title: "Car Repaired",
+            message: `your Car with number ${car_state.carNumber} is ${state} in Fixer Center`,
+            type: "REPAIR_DONE",
+          });
         }
 
         repair.Services = repair.Services.concat(req.body.services);
