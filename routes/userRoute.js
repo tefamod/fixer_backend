@@ -29,7 +29,7 @@ const {
 } = require("../middlewares/uploadImageCloud");
 
 const authService = require("../services/authService");
-
+const { saveFCMToken } = require("../services/notificationFire");
 const router = express.Router();
 
 router.use(authService.protect);
@@ -61,7 +61,7 @@ router
     updateUser,
   )
   .delete(deleteUserValidator, deleteUser);
-
+router.route("/saveFCMToken/:userId").put(saveFCMToken);
 router.route("/active/:id").put(makeUserUnactive);
 router.route("/search/:searchString").get(searchForUser);
 router.route("/carCode/:clientType").get(suggestNextCodeNumber);

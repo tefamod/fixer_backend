@@ -4,17 +4,12 @@ const dotenv = require("dotenv");
 const morgan = require("morgan");
 const cron = require("node-cron");
 const axios = require("axios");
-const http = require("http");
 
 dotenv.config({ path: "config.env" });
-
-const { initSocket } = require("./utils/notifications/socket.js");
-const startCronJobs = require("./utils/notifications/remind.js");
-
 const apiError = require("./utils/apiError");
 const dbconnection = require("./config/database");
-
-// Routes
+//const categoryRoute = require("./routes/categoryRoutes");
+//const SubCategoryRoute = require("./routes/subCategoryRoutes");
 const GarageRoute = require("./routes/GarageRoute");
 const InvRoute = require("./routes/inventoryRoute");
 const userRoute = require("./routes/userRoute");
@@ -25,27 +20,30 @@ const workerRoute = require("./routes/WorkersRoute");
 const MonthlyReport = require("./routes/monthlyReportRoute");
 const CategoryCode = require("./routes/CategoryCodeRoute");
 const appVersion = require("./routes/appVersionRoute");
+const globalError = require("./middlewares/errorMiddleWare");
 const changeColor = require("./routes/changeColorRoute");
 const getCarImage = require("./routes/getCarImageRoute");
 const ClearCarData = require("./routes/ClearCarDataRoute");
-const notRoute = require("./utils/notifications/notRoute.js");
+const Notification = require("./routes/notificationRoute");
 
-const globalError = require("./middlewares/errorMiddleWare");
-
-// DB connection
+//db connection
 dbconnection();
-
-// Express app
+// express app
 const app = express();
 
-// Middlewares
-app.use(cors({ origin: true, credentials: true }));
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  }),
+);
 app.options("*", cors());
+// middlewaers
 app.use(express.json());
-
-if (process.env.NODE_ENV === "development") {
+// eslint-disable-next-line eqeqeq
+if (process.env.NODE_ENV == "development") {
   app.use(morgan("dev"));
-  console.log(`mode ${process.env.NODE_ENV}`);
+  console.log(` mode ${process.env.NODE_ENV}`);
 }
 
 // Routes
@@ -62,33 +60,30 @@ app.use("/api/V2/appVersion", appVersion);
 app.use("/api/V2/color", changeColor);
 app.use("/api/V2/GetCarImage", getCarImage);
 app.use("/api/V2/ClearCarData", ClearCarData);
-app.use("/api/V2/Notifications", notRoute);
-
-// Ping API
+app.use("/api/V2/Notification", Notification);
+// ping api
 app.get("/api/ping", (req, res) => {
   res.status(200).send("Server is alive!");
 });
+const path = require("path");
 
-// 404 handler
+// Must be served at exactly this URL path — browser looks for it here automatically
+app.get("/firebase-messaging-sw.js", (req, res) => {
+  res.sendFile(path.join(__dirname, "firebase-messaging-sw.js"));
+});
 app.all("*", (req, res, next) => {
+  //create error and send it to error handling middleware
+  // eslint-disable-next-line new-cap
   next(new apiError(`can not find this route ${req.originalUrl}`, 400));
 });
-
-// Global error handler
+//Global error handling middleware
 app.use(globalError);
 
 const PORT = process.env.PORT || 4100;
-const server = http.createServer(app);
-
-initSocket(server);
-
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const server = app.listen(PORT, () => {
+  console.log(`app running on port ${PORT}`);
 });
-
-startCronJobs();
-
-// Handle unhandled rejection
+//handle rejection outside express
 process.on("unhandledRejection", (err) => {
   console.error(`unhandledRejection error ${err.name} | ${err.message}`);
   server.close(() => {
@@ -97,18 +92,29 @@ process.on("unhandledRejection", (err) => {
   });
 });
 
-// Self-ping
+//self-ping cron job to keep the server awake
 cron.schedule("*/14 * * * *", () => {
-  if (!process.env.BASE_URL) return;
-
-  console.log("Pinging the server...");
-
+  console.log("Pinging the server to keep it alive...");
   axios
     .get(`${process.env.BASE_URL}/api/ping`)
-    .then((res) => {
-      console.log("Ping success");
+
+    .then((response) => {
+      console.log("Ping successful:", response.data);
     })
-    .catch((err) => {
-      console.error("Ping failed:", err.message);
+    .catch((error) => {
+      if (error.response) {
+        // Server responded with a status other than 2xx
+        console.error(
+          "Server responded with an error:",
+          error.response.status,
+          error.response.data,
+        );
+      } else if (error.request) {
+        // No response received
+        console.error("No response received:", error.request);
+      } else {
+        // Error setting up the request
+        console.error("Error setting up the request:", error.message);
+      }
     });
 });

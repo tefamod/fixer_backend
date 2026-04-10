@@ -16,6 +16,7 @@ const createToken = require("../utils/createToken");
 
 const User = require("../models/userModel");
 const otpGenerator = require("otp-generator");
+const admin = require("../config/fireBase.js");
 
 // Function to generate a unique 8-digit code
 const generateUniqueCode = async () => {
@@ -107,6 +108,9 @@ exports.loginByCarCode = asyncHandler(async (req, res, next) => {
 
   if (!user) {
     return next(new ApiError("Incorrect carCode or password", 401));
+  }
+  if (user.fcmToken) {
+    await admin.messaging().subscribeToTopic(user.fcmToken, "all_users");
   }
   let carNumber = 0;
   for (var i = 0; i < user.car.length; i++) {
@@ -250,8 +254,6 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
 const generateUniqueToken = () => {
   return Math.random().toString(36).substr(2, 10);
 };
-
-const tokenStore = {};
 
 // @desc    Login using mail
 // @route   GET /api/v1/auth/system/loginByMail
