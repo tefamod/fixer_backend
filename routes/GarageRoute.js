@@ -20,19 +20,20 @@ const {
 } = require("../middlewares/uploadImageCloud");
 
 router.route("/").get(getCars);
-router
-  .route("/updateCarsImageInDB")
-  .post(uploadSingleImage("image"), processCarImage);
-router.route("/getCar/:id").get(getCar);
-router.route("/add/:id").post(addCar);
 router.route("/repairing").get(getRepairingCars);
-router.route("/:carNumber").put(makeCarInRepair);
+router.route("/getCarsInDB/").get(getUniqueBrands);
+router
+  .route("/cloudeniry/updateCarsImageInDB")
+  .post(uploadSingleImage("image"), processCarImage);
 router.route("/search/:searchString").get(searchForallCars);
 router.route("/search/repairing/:searchString").get(searchForRepairingCars);
+router.route("/getCar/:id").get(getCar);
+router.route("/add/:id").post(addCar);
 router
   .route("/update/:id")
   .put(uploadSingleImage("image"), updateCarImage, updateCar);
 router.route("/delete/:id").delete(deleteCar);
-router.route("/getCarsInDB/").get(getUniqueBrands);
+
+router.route("/:carNumber").put(makeCarInRepair);
 
 module.exports = router;

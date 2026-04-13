@@ -78,7 +78,7 @@ exports.deleteUserImage = async (req, res, next) => {
 };
 
 // @desc    save user image in cloudinary
-// @route   post /api/v2/car/cloudinary/
+// @route   post /api/v2/Garage/updateCarsImageInDB/
 // @access  public
 exports.processCarImage = async (req, res, next) => {
   if (!req.file || !req.file.buffer) return next();
@@ -90,7 +90,15 @@ exports.processCarImage = async (req, res, next) => {
     const fileName = `${brand}.${category}.${model}.${color}`
       .toLowerCase()
       .replace(/\s+/g, "_");
+    const publicId = `Cars/${fileName}`;
 
+    try {
+      await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+      console.log(`🗑️ Old image deleted: ${publicId}`);
+    } catch (err) {
+      // Image didn't exist — no problem, continue
+      console.log(`ℹ️ No existing image to delete: ${publicId}`);
+    }
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
@@ -99,7 +107,9 @@ exports.processCarImage = async (req, res, next) => {
           resource_type: "image",
           format: "png",
           transformation: [
-            { width: 500, height: 500, crop: "fill", gravity: "auto" },
+            { effect: "trim:10" },
+            { width: 500, height: 500, crop: "pad", background: "transparent" },
+            ,
           ],
         },
         (err, uploadResult) => {
@@ -129,7 +139,12 @@ exports.processCarImage = async (req, res, next) => {
       },
     );
 
-    next();
+    return res.status(200).json({
+      status: "success",
+      message: "Car image uploaded and DB updated successfully",
+      image: result.secure_url,
+      imagePublicId: result.public_id,
+    });
   } catch (err) {
     next(new ApiError(`Error processing image: ${err.message}`, 500));
   }

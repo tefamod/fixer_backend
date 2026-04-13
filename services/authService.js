@@ -12,6 +12,10 @@ const {
   sendCarCredentials,
   sendOtp,
 } = require("./emailService");
+const {
+  sendRepairDoneNotification,
+  sendNeedsCheckNotification,
+} = require("./notificationFire");
 const createToken = require("../utils/createToken");
 
 const User = require("../models/userModel");
@@ -122,17 +126,17 @@ exports.loginByCarCode = asyncHandler(async (req, res, next) => {
   if (!carNumber) {
     return next(new ApiError("No car found for the given carCode", 404));
   }
-  // Find the car by carNumber
   const car = await Car.findOne({ carNumber });
 
   if (!car) {
     return next(new ApiError("No car found for the given carCode", 404));
   }
+  if (car.State == "Need to check") {
+    await sendNeedsCheckNotification(car.carNumber);
+  }
 
-  // Generate token
   const token = createToken(user._id);
 
-  // Remove password from user object
   delete user._doc.password;
   delete user._doc.car;
 

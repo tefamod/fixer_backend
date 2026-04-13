@@ -8,6 +8,9 @@ const axios = require("axios");
 dotenv.config({ path: "config.env" });
 const apiError = require("./utils/apiError");
 const dbconnection = require("./config/database");
+
+const { runBackup } = require("./utils/for_backup/backup");
+
 //const categoryRoute = require("./routes/categoryRoutes");
 //const SubCategoryRoute = require("./routes/subCategoryRoutes");
 const GarageRoute = require("./routes/GarageRoute");
@@ -117,4 +120,11 @@ cron.schedule("*/14 * * * *", () => {
         console.error("Error setting up the request:", error.message);
       }
     });
+});
+
+// ✅ Runs every 3 days at 2:00 AM
+//cron.schedule("0 2 */3 * *", () => {
+cron.schedule("0 2 * * *", () => {
+  console.log("⏰ Cron triggered: running backup...");
+  runBackup();
 });
