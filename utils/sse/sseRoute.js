@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const { addClient, removeClient } = require("./sseService");
 
-// GET /SSE/verify?email=...
 router.get("/verify", (req, res) => {
   const { email } = req.query;
   if (!email) return res.status(400).end();
@@ -13,12 +12,26 @@ router.get("/verify", (req, res) => {
   res.flushHeaders();
 
   const heartbeat = setInterval(() => res.write(`: ping\n\n`), 25000);
+
+  // ⏰ Auto-close after 15 minutes
+  const timeout = setTimeout(
+    () => {
+      res.write(`data: ${JSON.stringify({ status: "timeout" })}\n\n`);
+      cleanup();
+      res.end();
+    },
+    15 * 60 * 1000,
+  );
+
+  const cleanup = () => {
+    clearInterval(heartbeat);
+    clearTimeout(timeout);
+    removeClient(email);
+  };
+
   addClient(email, res);
 
-  req.on("close", () => {
-    clearInterval(heartbeat);
-    removeClient(email);
-  });
+  req.on("close", cleanup);
 });
 
 module.exports = router;
