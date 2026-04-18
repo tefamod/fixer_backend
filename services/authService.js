@@ -288,8 +288,8 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
 
     return res.status(200).json({
       message: "Verification link sent to your email",
-      email, // ← frontend uses this to open SSE
-      sseStatus: "pending_verification", // ← frontend checks this flag
+      email,
+      sseStatus: "pending_verification",
     });
   }
 
@@ -328,12 +328,16 @@ exports.verifyLogin = asyncHandler(async (req, res, next) => {
   user.vertified = true;
   user.loginToken = { token: null, expiresAt: null };
   await user.save({ validateBeforeSave: false });
-  //for sse
-  notifyClient(user.email, { status: "verified" });
 
   const authToken = createToken({ userId: user._id });
   delete user._doc.password;
   delete user._doc.vertified;
+  //for sse
+  notifyClient(user.email, {
+    status: "verified",
+    token: authToken,
+    user: user._doc,
+  });
 
   return res.status(200).json({
     message: "Login successful",
