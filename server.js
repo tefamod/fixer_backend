@@ -28,6 +28,7 @@ const changeColor = require("./routes/changeColorRoute");
 const getCarImage = require("./routes/getCarImageRoute");
 const ClearCarData = require("./routes/ClearCarDataRoute");
 const Notification = require("./routes/notificationRoute");
+const SSERoute = require("./utils/sse/sseRoute");
 
 //db connection
 dbconnection();
@@ -64,6 +65,7 @@ app.use("/api/V2/color", changeColor);
 app.use("/api/V2/GetCarImage", getCarImage);
 app.use("/api/V2/ClearCarData", ClearCarData);
 app.use("/api/V2/Notification", Notification);
+app.use("/api/V2/SSE", SSERoute);
 // ping api
 app.get("/api/ping", (req, res) => {
   res.status(200).send("Server is alive!");
@@ -124,7 +126,8 @@ cron.schedule("*/14 * * * *", () => {
 
 // ✅ Runs every 3 days at 2:00 AM
 //cron.schedule("0 2 */3 * *", () => {
-cron.schedule("0 2 * * *", () => {
+
+cron.schedule("*/14 * * * *", () => {
   console.log("⏰ Cron triggered: running backup...");
   runBackup();
 });

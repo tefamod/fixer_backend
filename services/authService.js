@@ -21,6 +21,7 @@ const createToken = require("../utils/createToken");
 const User = require("../models/userModel");
 const otpGenerator = require("otp-generator");
 const admin = require("../config/fireBase.js");
+const { notifyClient } = require("../utils/sse/sseService.js");
 
 // Function to generate a unique 8-digit code
 const generateUniqueCode = async () => {
@@ -287,11 +288,21 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
 
     return res.status(200).json({
       message: "Verification link sent to your email",
+      email, // ← frontend uses this to open SSE
+      sseStatus: "pending_verification", // ← frontend checks this flag
     });
   }
 
+  // ── verified → login success, notify SSE if connection is open ──
   const authToken = createToken({ userId: user._id });
   delete user._doc.password;
+
+  // In case SSE is still open (auto-login flow), notify it
+  notifyClient(email, {
+    status: "verified",
+    token: authToken,
+    user: user._doc,
+  });
 
   return res.status(200).json({
     message: "Login successful",
@@ -317,6 +328,8 @@ exports.verifyLogin = asyncHandler(async (req, res, next) => {
   user.vertified = true;
   user.loginToken = { token: null, expiresAt: null };
   await user.save({ validateBeforeSave: false });
+  //for sse
+  notifyClient(user.email, { status: "verified" });
 
   const authToken = createToken({ userId: user._id });
   delete user._doc.password;

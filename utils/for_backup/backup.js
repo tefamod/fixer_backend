@@ -1,6 +1,6 @@
 const { exec } = require("child_process");
 const fs = require("fs");
-const drive = require("./drive");
+const drive = require("./drive"); // ✅ this is the google drive client
 
 const runBackup = async () => {
   const fileName = `backup-${Date.now()}.gz`;
@@ -19,11 +19,13 @@ const runBackup = async () => {
 
       try {
         await drive.files.create({
+          // ✅ drive already IS the google drive client
           requestBody: {
             name: fileName,
             parents: [process.env.FOLDER_ID],
           },
           media: {
+            mimeType: "application/gzip", // ✅ ADD THIS — was missing
             body: fs.createReadStream(fileName),
           },
         });
