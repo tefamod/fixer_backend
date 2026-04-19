@@ -10,8 +10,8 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:4000/api/V2",
-        description: "Local Development Server",
+        url: "https://test-fixer.onrender.com/api/V2",
+        description: "Development Server",
       },
     ],
     components: {
