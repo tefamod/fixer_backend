@@ -10,7 +10,9 @@ const apiError = require("./utils/apiError");
 const dbconnection = require("./config/database");
 
 const { runBackup } = require("./utils/for_backup/backup");
-
+///swagger
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./config/swagger");
 //const categoryRoute = require("./routes/categoryRoutes");
 //const SubCategoryRoute = require("./routes/subCategoryRoutes");
 const GarageRoute = require("./routes/GarageRoute");
@@ -24,8 +26,6 @@ const MonthlyReport = require("./routes/monthlyReportRoute");
 const CategoryCode = require("./routes/CategoryCodeRoute");
 const appVersion = require("./routes/appVersionRoute");
 const globalError = require("./middlewares/errorMiddleWare");
-const changeColor = require("./routes/changeColorRoute");
-const getCarImage = require("./routes/getCarImageRoute");
 const ClearCarData = require("./routes/ClearCarDataRoute");
 const Notification = require("./routes/notificationRoute");
 const SSERoute = require("./utils/sse/sseRoute");
@@ -49,7 +49,14 @@ if (process.env.NODE_ENV == "development") {
   app.use(morgan("dev"));
   console.log(` mode ${process.env.NODE_ENV}`);
 }
-
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: "Fixer API Docs",
+    customCss: ".swagger-ui .topbar { display: none }",
+  }),
+);
 // Routes
 app.use("/api/V2/Inventort", InvRoute);
 app.use("/api/V2/Garage", GarageRoute);
@@ -61,8 +68,6 @@ app.use("/api/V2/Worker", workerRoute);
 app.use("/api/V2/MonthlyReport", MonthlyReport);
 app.use("/api/V2/Category", CategoryCode);
 app.use("/api/V2/appVersion", appVersion);
-app.use("/api/V2/color", changeColor);
-app.use("/api/V2/GetCarImage", getCarImage);
 app.use("/api/V2/ClearCarData", ClearCarData);
 app.use("/api/V2/Notification", Notification);
 app.use("/api/V2/SSE", SSERoute);
