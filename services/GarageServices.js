@@ -7,14 +7,14 @@ const factory = require("./handlersFactory");
 const ApiFeatures = require("../utils/apiFeatures");
 const CategoryCode = require("../models/categoryCode");
 const searchService = require("./searchService");
-
+const { normalizeCarNumber } = require("../utils/carNumberCheck");
 // @desc    Add car
 // @route   POST /api/v1/Garage/:id
 // @access  Private
 exports.addCar = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
+  const carNumber = normalizeCarNumber(req.body.carNumber);
   const {
-    carNumber,
     chassisNumber,
     color,
     brand,
