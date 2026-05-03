@@ -12,6 +12,7 @@ const {
   getCar,
   deleteCar,
   getUniqueBrands,
+  setCarImg,
 } = require("../services/GarageServices");
 const { uploadSingleImage } = require("../middlewares/uploadImageMiddleware");
 const {
@@ -120,7 +121,7 @@ router.route("/getCarsInDB/").get(getUniqueBrands);
  * @swagger
  * /Garage/cloudeniry/updateCarsImageInDB:
  *   post:
- *     summary: Upload and process a car image to Cloudinary
+ *     summary: (for developer) Upload image on Cloudinary and save the image to all cars with the same (brand , category , model , color)
  *     tags: [Garage]
  *     security:
  *       - bearerAuth: []
@@ -353,5 +354,110 @@ router.route("/delete/:id").delete(deleteCar);
  *         description: Car not found
  */
 router.route("/:carNumber").put(makeCarInRepair);
-
+/**
+ * @swagger
+ * /api/cars/image:
+ *   put:
+ *     summary: Set or generate a car image
+ *     description: >
+ *       Either generate a car image automatically from imagin.studio using
+ *       brand/model/category/color, or upload a custom image file.
+ *       The resulting Cloudinary URL is saved to the matching car document.
+ *     tags:
+ *       - Cars
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - method
+ *               - brand
+ *               - model
+ *               - category
+ *               - color
+ *             properties:
+ *               method:
+ *                 type: string
+ *                 enum: [generate, upload]
+ *                 description: >
+ *                   "generate" fetches & processes image from imagin.studio.
+ *                   "upload" uses the uploaded file directly.
+ *                 example: generate
+ *               brand:
+ *                 type: string
+ *                 description: Car make — used to find the car document and build the imagin.studio URL.
+ *                 example: bmw
+ *               model:
+ *                 type: string
+ *                 description: Model year suffix passed to imagin.studio.
+ *                 example: "24"
+ *               category:
+ *                 type: string
+ *                 description: Body type / model family — used to find the car document and build the URL.
+ *                 example: sedan
+ *               color:
+ *                 type: string
+ *                 description: Paint color name passed to imagin.studio.
+ *                 example: red
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file — required only when method is "upload".
+ *     responses:
+ *       200:
+ *         description: Image processed and saved to car document successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 publicId:
+ *                   type: string
+ *                   example: cars/bmw_24_sedan_red
+ *                 url:
+ *                   type: string
+ *                   example: https://res.cloudinary.com/dcj7fkdub/image/upload/cars/bmw_24_sedan_red.jpg
+ *                 width:
+ *                   type: integer
+ *                   example: 1920
+ *                 height:
+ *                   type: integer
+ *                   example: 1080
+ *                 bytes:
+ *                   type: integer
+ *                   example: 204800
+ *       400:
+ *         description: Missing required fields or invalid method value.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: method, brand, model, category and color are required
+ *       404:
+ *         description: No car found matching the given brand, model and category.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Can't find car with brand: bmw, model: 24, category: sedan"
+ *       500:
+ *         description: Upstream error from imagin.studio or Cloudinary.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal server error
+ */
+router.route("/carImg/setCarImg").put(uploadSingleImage("image"), setCarImg);
 module.exports = router;

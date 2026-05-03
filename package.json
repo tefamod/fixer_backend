@@ -102,6 +102,7 @@
     "is-number": "^7.0.0",
     "is-plain-obj": "^2.1.0",
     "is-unicode-supported": "^0.1.0",
+    "jimp": "^1.6.1",
     "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
     "jwa": "^1.4.1",

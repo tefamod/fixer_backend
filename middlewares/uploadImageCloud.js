@@ -77,7 +77,7 @@ exports.deleteUserImage = async (req, res, next) => {
   next();
 };
 
-// @desc    save user image in cloudinary
+// @desc    save car image in cloudinary
 // @route   post /api/v2/Garage/updateCarsImageInDB/
 // @access  public
 exports.processCarImage = async (req, res, next) => {

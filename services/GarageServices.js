@@ -1,3 +1,6 @@
+const { Jimp } = require("jimp");
+const { v2: cloudinary } = require("cloudinary");
+const axios = require("axios");
 const Car = require("../models/Car");
 const Repairing = require("../models/repairingModel");
 const User = require("../models/userModel");
@@ -8,6 +11,8 @@ const ApiFeatures = require("../utils/apiFeatures");
 const CategoryCode = require("../models/categoryCode");
 const searchService = require("./searchService");
 const { normalizeCarNumber } = require("../utils/carNumberCheck");
+const { removeBgExternal } = require("../utils/backgroundRemover");
+
 // @desc    Add car
 // @route   POST /api/v1/Garage/:id
 // @access  Private
@@ -417,4 +422,130 @@ exports.getUniqueBrands = asyncHandler(async (req, res, next) => {
   }
 
   return next(new apiError("enter the car details", 400));
+});
+
+// @desc    set cars images with imagin based on brand , category , model and color
+// @route   put /api/v2/setCarImg
+// @access  public
+cloudinary.config({
+  cloud_name: "dcj7fkdub", // e.g. "myapp123"
+  api_key: "922361533351136", // from cloudinary dashboard
+  api_secret: "OG8wVy_BLpTZGqsQViomr_o_vpE",
+});
+exports.setCarImg = asyncHandler(async (req, res, next) => {
+  const { method, brand, model, category, color, back } = req.body;
+
+  if (!method || !brand || !model || !category || !color) {
+    return next(
+      new apiError(
+        "method, brand, model, category and color are required",
+        400,
+      ),
+    );
+  }
+
+  const car = await Car.findOne({ brand, model, category });
+  if (!car) {
+    return next(
+      new apiError(
+        `Can't find car with brand: ${brand}, model: ${model}, category: ${category}`,
+        404,
+      ),
+    );
+  }
+
+  let result;
+
+  if (method === "generate") {
+    const imageUrl = new URL("https://cdn.imagin.studio/getimage");
+    Object.entries({
+      customer: "img",
+      make: brand,
+      modelFamily: category,
+      modelYear: model,
+      modelVariant: "sedan" || back,
+      paintId: `color-${color}`,
+      paintDescription: color,
+      countryCode: "EGY",
+      zoomType: "fullscreen",
+      angle: "28",
+      fileType: "png",
+    }).forEach(([k, v]) => imageUrl.searchParams.append(k, v));
+
+    const response = await axios.get(imageUrl.toString(), {
+      responseType: "arraybuffer",
+      headers: { Referer: "https://www.imagin.studio" },
+    });
+
+    const image = await Jimp.read(Buffer.from(response.data));
+    image.scan(0, 0, image.bitmap.width, image.bitmap.height, (px, py, idx) => {
+      const r = image.bitmap.data[idx];
+      const g = image.bitmap.data[idx + 1];
+      const b = image.bitmap.data[idx + 2];
+      const a = image.bitmap.data[idx + 3];
+      if (a < 200 || (r + g + b) / 3 > 200) {
+        image.bitmap.data[idx] = Math.min(255, r + 40);
+        image.bitmap.data[idx + 1] = Math.min(255, g + 40);
+        image.bitmap.data[idx + 2] = Math.min(255, b + 40);
+        image.bitmap.data[idx + 3] = 255;
+      }
+    });
+    const cleanBuffer = await image.getBuffer("image/jpeg");
+
+    const publicId = `${brand}_${model}_${category}_${color}`
+      .toLowerCase()
+      .replace(/\s+/g, "-");
+    result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: "cars",
+          public_id: publicId,
+          overwrite: true,
+          resource_type: "image",
+        },
+        (error, data) => (error ? reject(error) : resolve(data)),
+      );
+      stream.end(cleanBuffer);
+    });
+  } else if (method === "upload") {
+    if (!req.file) {
+      return next(
+        new apiError("Image file is required when method is upload", 400),
+      );
+    }
+    const bgRemovedBuffer = await removeBgExternal(req.file.buffer);
+
+    result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: "cars",
+          transformation: [
+            {
+              width: 1920,
+              height: 1080,
+              crop: "fill",
+              gravity: "center",
+            },
+          ],
+        },
+        (error, data) => (error ? reject(error) : resolve(data)),
+      );
+      stream.end(bgRemovedBuffer);
+    });
+  } else {
+    return next(new apiError("method must be generate or upload", 400));
+  }
+
+  // Save image URL and publicId to car model
+  car.image = result.secure_url;
+  car.imagePublicId = result.public_id;
+  await car.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    publicId: result.public_id,
+    url: result.secure_url,
+    width: result.width,
+    height: result.height,
+    bytes: result.bytes,
+  });
 });
