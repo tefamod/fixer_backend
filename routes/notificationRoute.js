@@ -12,11 +12,11 @@ const authService = require("../services/authService");
  * @swagger
  * tags:
  *   name: Notifications
- *   description: Push notifications management (Admin only)
+ *   description: Push notifications management (user only)
  */
 
 router.use(authService.protect);
-router.use(authService.allowedTo("admin"));
+router.use(authService.allowedTo("user"));
 
 /**
  * @swagger

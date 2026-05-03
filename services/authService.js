@@ -147,13 +147,10 @@ exports.loginByCarCode = asyncHandler(async (req, res, next) => {
 
 // @desc   make sure the user is logged in
 exports.protect = asyncHandler(async (req, res, next) => {
-  // 1) Check if token exist, if exist get
+  //check if token exist, if exist get
   let token;
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    token = req.headers.authorization.split(" ")[1];
+  if (req.headers.token && req.headers.token.startsWith("Bearer")) {
+    token = req.headers.token.split(" ")[1];
   }
   if (!token) {
     return next(
@@ -164,11 +161,11 @@ exports.protect = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // 2) Verify token (no change happens, expired token)
+  //verify token (no change happens, expired token)
   const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
-  // 3) Check if user exists
-  const currentUser = await User.findById(decoded.userId.userId);
+  //check if user exists
+  const currentUser = await User.findById(decoded.userId);
   if (!currentUser) {
     return next(
       new ApiError(
@@ -200,7 +197,7 @@ exports.protect = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Authorization (User Permissions)
-// ["admin", "manager"]
+// ["admin", "user"]
 exports.allowedTo = (...roles) =>
   asyncHandler(async (req, res, next) => {
     // 1) access roles
