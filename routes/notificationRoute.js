@@ -24,6 +24,8 @@ router.use(authService.allowedTo("user"));
  *   post:
  *     summary: Save FCM token for a specific user
  *     tags: [Notifications]
+ *     x-category: app
+ *     x-status: "new"
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -58,6 +60,8 @@ router.route("/saveFCMToken/:userId").post(saveFCMToken);
  *   post:
  *     summary: Send a push notification to a specific user
  *     tags: [Notifications]
+ *     x-category: system
+ *     x-status: "new"
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -95,6 +99,8 @@ router.route("/send/:id").post(sendNotificationToUser);
  *   post:
  *     summary: Send a push notification to all users
  *     tags: [Notifications]
+ *     x-category: system
+ *     x-status: "new"
  *     security:
  *       - bearerAuth: []
  *     requestBody:

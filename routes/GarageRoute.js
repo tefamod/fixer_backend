@@ -270,6 +270,8 @@ router.route("/add/:id").post(addCar);
  *   put:
  *     summary: Update car details and optionally its image
  *     tags: [Garage]
+ *     x-category: system
+ *     x-status: "updated"
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -365,6 +367,8 @@ router.route("/:carNumber").put(makeCarInRepair);
  *       The resulting Cloudinary URL is saved to the matching car document.
  *     tags:
  *       - Cars
+ *     x-category: system
+ *     x-status: "new"
  *     requestBody:
  *       required: true
  *       content:

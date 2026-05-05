@@ -102,6 +102,8 @@ router.route("/").get(getAllCom).post(addComponent);
  *   get:
  *     summary: Get all available measurement units
  *     tags: [Inventory]
+ *     x-category: system
+ *     x-status: "new"
  *     security:
  *       - bearerAuth: []
  *     responses:

@@ -141,6 +141,8 @@ router.put(
  *   post:
  *     summary: Create a new user
  *     tags: [Users]
+ *     x-category: system
+ *     x-status: "updated"
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -180,6 +182,8 @@ router
  *   get:
  *     summary: Get a specific user by ID
  *     tags: [Users]
+ *     x-category: system
+ *     x-status: "updated"
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -197,6 +201,8 @@ router
  *   put:
  *     summary: Update user details
  *     tags: [Users]
+ *     x-category: system
+ *     x-status: "updated"
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -226,6 +232,8 @@ router
  *   delete:
  *     summary: Delete a user by ID
  *     tags: [Users]
+ *     x-category: system
+ *     x-status: "new"
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -257,6 +265,8 @@ router
  *   put:
  *     summary: Save FCM token for push notifications
  *     tags: [Users]
+ *     x-category: app
+ *     x-new: true
  *     security:
  *       - bearerAuth: []
  *     parameters:
