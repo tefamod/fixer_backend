@@ -268,7 +268,6 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
     return next(new ApiError("Incorrect email or password", 401));
   }
 
-  // ── unverified → send verification link ──
   if (user.vertified === false && email !== "admin") {
     const verifyToken = generateUniqueToken();
     const link = `https://test-fixer.onrender.com/api/V2/auth/admin/verifyLogin?token=${verifyToken}`;
@@ -300,7 +299,8 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
     token: authToken,
     user: user._doc,
   });
-
+  user.vertified = false;
+  user.save({ validateBeforeSave: false });
   return res.status(200).json({
     message: "Login successful",
     data: { user },
