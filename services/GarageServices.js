@@ -428,9 +428,9 @@ exports.getUniqueBrands = asyncHandler(async (req, res, next) => {
 // @route   put /api/v2/setCarImg
 // @access  public
 cloudinary.config({
-  cloud_name: "dcj7fkdub", // e.g. "myapp123"
-  api_key: "922361533351136", // from cloudinary dashboard
-  api_secret: "OG8wVy_BLpTZGqsQViomr_o_vpE",
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 exports.setCarImg = asyncHandler(async (req, res, next) => {
   const { method, brand, model, category, color, back } = req.body;
