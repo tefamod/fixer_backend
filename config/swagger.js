@@ -40,7 +40,7 @@ Fixer Flutter Backend - Full API Documentation
     },
     security: [{ bearerAuth: [] }],
   },
-  apis: ["./routes/*.js"], // picks up all 14 route files automatically
+  apis: ["./routes/*.js", "./utils/**/*.js"],
 };
 
 // ─── Build the full spec ──────────────────────────────────────────────────
