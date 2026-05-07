@@ -16,6 +16,15 @@ const {
   verifyLogin,
 } = require("../services/authService");
 
+const {
+  beginRegistration,
+  finishRegistration,
+  beginLogin,
+  finishLogin,
+  listPasskeys,
+  revokePasskey,
+} = require("../services/passkeyAuthController");
+
 const router = express.Router();
 
 /**
@@ -242,5 +251,202 @@ router.post("/admin/firstCome", setEmailAndPassword);
  *         description: Token is invalid or expired
  */
 router.get("/admin/verifyLogin", verifyLogin);
+
+/**
+ * @swagger
+ * /auth/admin/passkey/register/begin:
+ *   post:
+ *     summary: Begin passkey registration
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [origin]
+ *             properties:
+ *               origin:
+ *                 type: string
+ *                 example: "http://localhost:3000"
+ *     responses:
+ *       200:
+ *         description: Registration challenge created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Bad request
+ */
+router.post("/admin/passkey/register/begin", verifyToken, beginRegistration);
+
+/**
+ * @swagger
+ * /auth/admin/passkey/register/finish:
+ *   post:
+ *     summary: Finish passkey registration
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [credential, origin, clientDataJSON]
+ *             properties:
+ *               credential:
+ *                 type: object
+ *               origin:
+ *                 type: string
+ *               clientDataJSON:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Passkey registered successfully
+ *       400:
+ *         description: Registration failed
+ */
+router.post("/admin/passkey/register/finish", verifyToken, finishRegistration);
+
+/**
+ * @swagger
+ * /auth/admin/passkey/login/begin:
+ *   post:
+ *     summary: Begin passkey login
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, origin]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               origin:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login challenge created
+ *       400:
+ *         description: Bad request
+ */
+router.post("/admin/passkey/login/begin", beginLogin);
+
+/**
+ * @swagger
+ * /auth/admin/passkey/login/finish:
+ *   post:
+ *     summary: Finish passkey login
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [credential, origin, clientDataJSON]
+ *             properties:
+ *               credential:
+ *                 type: object
+ *               origin:
+ *                 type: string
+ *               clientDataJSON:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 message:
+ *                   type: string
+ *                   example: "Login successful"
+ *                 token:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *       400:
+ *         description: Login failed
+ */
+router.post("/admin/passkey/login/finish", finishLogin);
+
+/**
+ * @swagger
+ * /auth/admin/passkey/list:
+ *   get:
+ *     summary: List user passkeys
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of passkeys
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     passkeys:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ */
+router.get("/admin/passkey/list", verifyToken, listPasskeys);
+
+/**
+ * @swagger
+ * /auth/admin/passkey/revoke:
+ *   post:
+ *     summary: Revoke passkey
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [credentialId]
+ *             properties:
+ *               credentialId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Passkey revoked successfully
+ *       404:
+ *         description: Passkey not found
+ */
+router.post("/admin/passkey/revoke", verifyToken, revokePasskey);
 
 module.exports = router;

@@ -289,21 +289,15 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // ── verified → login success, notify SSE if connection is open ──
+  // User is verified - return successful login
   const authToken = createToken({ userId: user._id });
-  delete user._doc.password;
-
-  // In case SSE is still open (auto-login flow), notify it
-  notifyClient(email, {
-    status: "verified",
-    token: authToken,
-    user: user._doc,
-  });
   user.vertified = false;
-  user.save({ validateBeforeSave: false });
+  const userResponse = { ...user._doc };
+  delete userResponse.password;
+
   return res.status(200).json({
     message: "Login successful",
-    data: { user },
+    data: { user: userResponse },
     token: authToken,
   });
 });
@@ -322,23 +316,34 @@ exports.verifyLogin = asyncHandler(async (req, res, next) => {
     return next(new ApiError("Login link has expired", 401));
   }
 
+  // CRITICAL: Update verification flag in DB first
   user.vertified = true;
   user.loginToken = { token: null, expiresAt: null };
   await user.save({ validateBeforeSave: false });
 
+  // Generate auth token after DB commit
   const authToken = createToken({ userId: user._id });
-  delete user._doc.password;
-  delete user._doc.vertified;
-  //for sse
+
+  // Prepare user data for response
+  const userResponse = { ...user._doc };
+  delete userResponse.password;
+  delete userResponse.vertified;
+
+  // Emit SSE verification event AFTER DB commit
   notifyClient(user.email, {
     status: "verified",
     token: authToken,
-    user: user._doc,
+    user: userResponse,
+    timestamp: new Date().toISOString(),
   });
+
+  console.log(
+    `User ${user.email} verified successfully, SSE notification sent`,
+  );
 
   return res.status(200).json({
     message: "Login successful",
-    data: { user },
+    data: { user: userResponse },
     token: authToken,
   });
 });

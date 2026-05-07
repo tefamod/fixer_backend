@@ -1,5 +1,5 @@
 const express = require("express");
-const { sseVerify, getSseStatus } = require("../../services/sseVerifyService");
+const { sseVerify, getSseStatus } = require("../services/sseVerifyService");
 
 const router = express.Router();
 
