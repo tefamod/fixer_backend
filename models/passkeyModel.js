@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-
+const { cairoDatePlugin } = require("../utils/cairoDate");
 const passkeySchema = new mongoose.Schema(
   {
     userId: {
@@ -59,6 +59,6 @@ const passkeySchema = new mongoose.Schema(
 passkeySchema.index({ userId: 1, revokedAt: 1 });
 passkeySchema.index({ credentialId: 1, revokedAt: 1 });
 
-const Passkey = mongoose.model("Passkey", passkeySchema);
+passkeySchema.plugin(cairoDatePlugin);
 
-module.exports = Passkey;
+module.exports = mongoose.model("Passkey", passkeySchema);

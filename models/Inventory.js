@@ -1,6 +1,6 @@
 // models/Inventory.js
 const mongoose = require("mongoose");
-
+const { cairoDatePlugin } = require("../utils/cairoDate");
 const inventorySchema = new mongoose.Schema(
   {
     name: {
@@ -27,5 +27,5 @@ const inventorySchema = new mongoose.Schema(
   // مفيده ليا لو عايز اجيب ال منتج الاحدث بالوقت
   { timestamps: true },
 );
-
+inventorySchema.plugin(cairoDatePlugin);
 module.exports = mongoose.model("Inventory", inventorySchema);

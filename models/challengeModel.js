@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-
+const { cairoDatePlugin } = require("../utils/cairoDate");
 const challengeSchema = new mongoose.Schema(
   {
     challenge: {
@@ -45,6 +45,5 @@ challengeSchema.index({ type: 1, expiresAt: 1, usedAt: 1 });
 // TTL index to automatically expire challenges after expiresAt
 challengeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-const Challenge = mongoose.model("Challenge", challengeSchema);
-
-module.exports = Challenge;
+challengeSchema.plugin(cairoDatePlugin);
+module.exports = mongoose.model("Challenge", challengeSchema);

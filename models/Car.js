@@ -1,6 +1,6 @@
 // models/Car.js
 const mongoose = require("mongoose");
-
+const { cairoDatePlugin } = require("../utils/cairoDate");
 const carSchema = new mongoose.Schema({
   ownerName: {
     type: String,
@@ -92,5 +92,5 @@ const carSchema = new mongoose.Schema({
     type: Number,
   },
 });
-
+carSchema.plugin(cairoDatePlugin);
 module.exports = mongoose.model("Car", carSchema);

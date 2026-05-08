@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-
+const { cairoDatePlugin } = require("../utils/cairoDate");
 // Define schema for the array elements
 //const additions = new mongoose.Schema({
 //  name: {
@@ -116,5 +116,5 @@ const repairingSchema = new mongoose.Schema(
   // مفيده ليا لو عايز اجيب ال منتج الاحدث بالوقت
   { timestamps: true },
 );
-
+repairingSchema.plugin(cairoDatePlugin);
 module.exports = mongoose.model("repairing", repairingSchema);
