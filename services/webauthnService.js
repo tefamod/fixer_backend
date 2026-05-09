@@ -42,26 +42,32 @@ const validateOrigin = (origin) => {
   console.log("Allowed origins:", ALLOWED_ORIGINS);
 
   // Allow localhost wildcard and 127.0.0.1 wildcard for development
-  const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
-  
+  const isLocalhost =
+    origin.includes("localhost") || origin.includes("127.0.0.1");
+
   const isValidOrigin = ALLOWED_ORIGINS.some((allowed) => {
     // Exact match for production origins
     if (!isLocalhost && allowed !== "*" && !origin.startsWith(allowed)) {
       return false;
     }
     // Allow any localhost/127.0.0.1 origin in development
-    if (isLocalhost && (allowed === "http://localhost:*" || allowed === "http://127.0.0.1:*")) {
+    if (
+      isLocalhost &&
+      (allowed === "http://localhost:*" || allowed === "http://127.0.0.1:*")
+    ) {
       return true;
     }
     // Default check for exact match or wildcard
     return origin.startsWith(allowed) || allowed === "*";
-  
+  });
+
   if (!isValidOrigin) {
     console.log("Origin validation failed for:", origin);
     throw new ApiError("Origin not allowed", 403);
   }
-  
+
   console.log("Origin validation passed for:", origin);
+  return true;
 };
 
 /**
