@@ -120,7 +120,7 @@ router.route("/").get(getAllCom).post(addComponent);
  *                     type: string
  *                   example: ["لتر", "كيلو", "قطعة"]
  */
-router.route("/Units").get(getAllUnits);
+router.route("/Units/").get(getAllUnits);
 
 /**
  * @swagger

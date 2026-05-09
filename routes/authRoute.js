@@ -258,6 +258,8 @@ router.get("/admin/verifyLogin", verifyLogin);
  *   post:
  *     summary: Begin passkey registration
  *     tags: [Auth]
+ *     x-category: system
+ *     x-status: "new"
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -295,6 +297,8 @@ router.post("/admin/passkey/register/begin", verifyToken, beginRegistration);
  *   post:
  *     summary: Finish passkey registration
  *     tags: [Auth]
+ *     x-category: system
+ *     x-status: "new"
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -325,6 +329,8 @@ router.post("/admin/passkey/register/finish", verifyToken, finishRegistration);
  *   post:
  *     summary: Begin passkey login
  *     tags: [Auth]
+ *     x-category: system
+ *     x-status: "new"
  *     security: []
  *     requestBody:
  *       required: true
@@ -353,6 +359,8 @@ router.post("/admin/passkey/login/begin", beginLogin);
  *   post:
  *     summary: Finish passkey login
  *     tags: [Auth]
+ *     x-category: system
+ *     x-status: "new"
  *     security: []
  *     requestBody:
  *       required: true
@@ -400,6 +408,8 @@ router.post("/admin/passkey/login/finish", finishLogin);
  *   get:
  *     summary: List user passkeys
  *     tags: [Auth]
+ *     x-category: system
+ *     x-status: "new"
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -429,6 +439,8 @@ router.get("/admin/passkey/list", verifyToken, listPasskeys);
  *   post:
  *     summary: Revoke passkey
  *     tags: [Auth]
+ *     x-category: system
+ *     x-status: "new"
  *     security:
  *       - bearerAuth: []
  *     requestBody:

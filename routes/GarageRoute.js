@@ -358,10 +358,10 @@ router.route("/delete/:id").delete(deleteCar);
 router.route("/:carNumber").put(makeCarInRepair);
 /**
  * @swagger
- * /api/cars/image:
+ * /Garage/carImg/setCarImg/:
  *   put:
  *     summary: Set or generate a car image
- *     description: >
+ *     description:
  *       Either generate a car image automatically from imagin.studio using
  *       brand/model/category/color, or upload a custom image file.
  *       The resulting Cloudinary URL is saved to the matching car document.

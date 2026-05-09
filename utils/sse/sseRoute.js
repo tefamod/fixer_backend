@@ -16,6 +16,8 @@ const router = express.Router();
  *   get:
  *     summary: Open SSE stream for email verification
  *     tags: [SSE]
+ *     x-category: system
+ *     x-status: "new"
  *     security: []
  *     parameters:
  *       - in: query
@@ -44,6 +46,8 @@ router.get("/verify", sseVerify);
  *   get:
  *     summary: Check SSE connection status for debugging
  *     tags: [SSE]
+ *     x-category: system
+ *     x-status: "new"
  *     security: []
  *     parameters:
  *       - in: query
