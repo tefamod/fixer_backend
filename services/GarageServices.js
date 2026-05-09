@@ -491,7 +491,7 @@ exports.setCarImg = asyncHandler(async (req, res, next) => {
       }
     });
     const cleanBuffer = await image.getBuffer("image/jpeg");
-
+    const bgRemovedBuffer = await removeBgExternal(cleanBuffer);
     const publicId = `${brand}_${model}_${category}_${color}`
       .toLowerCase()
       .replace(/\s+/g, "-");
@@ -505,7 +505,7 @@ exports.setCarImg = asyncHandler(async (req, res, next) => {
         },
         (error, data) => (error ? reject(error) : resolve(data)),
       );
-      stream.end(cleanBuffer);
+      stream.end(bgRemovedBuffer);
     });
   } else if (method === "upload") {
     if (!req.file) {
