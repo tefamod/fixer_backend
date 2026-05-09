@@ -20,7 +20,7 @@ router.use(authService.allowedTo("user"));
 
 /**
  * @swagger
- * /notification/saveFCMToken/{userId}:
+ * /Notification/saveFCMToken/{userId}:
  *   post:
  *     summary: Save FCM token for a specific user
  *     tags: [Notifications]
@@ -56,7 +56,7 @@ router.route("/saveFCMToken/:userId").post(saveFCMToken);
 
 /**
  * @swagger
- * /notification/send/{id}:
+ * /Notification/send/{id}:
  *   post:
  *     summary: Send a push notification to a specific user
  *     tags: [Notifications]
@@ -95,7 +95,7 @@ router.route("/send/:id").post(sendNotificationToUser);
 
 /**
  * @swagger
- * /notification/notificationSendAll:
+ * /Notification/notificationSendAll:
  *   post:
  *     summary: Send a push notification to all users
  *     tags: [Notifications]

@@ -17,7 +17,7 @@ const {
 
 /**
  * @swagger
- * /clearCarData/brands:
+ * /ClearCarData/brands:
  *   get:
  *     summary: Get all car brands from the database
  *     tags: [Car Data Cleanup]
@@ -61,7 +61,7 @@ router.route("/brands").get(getAllBrands).put(cleanBrands);
 
 /**
  * @swagger
- * /clearCarData/categories:
+ * /ClearCarData/categories:
  *   get:
  *     summary: Get all car categories from the database
  *     tags: [Car Data Cleanup]

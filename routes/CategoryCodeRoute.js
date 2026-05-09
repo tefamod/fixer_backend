@@ -19,7 +19,7 @@ const {
 
 /**
  * @swagger
- * /categoryCode:
+ * /Category:
  *   get:
  *     summary: Get all category codes
  *     tags: [Category Code]
@@ -92,7 +92,7 @@ router.route("/").post(createCategoryCode).get(getallCategoryCode);
 
 /**
  * @swagger
- * /categoryCode/category/fordrop:
+ * /Category/category/fordrop:
  *   get:
  *     summary: Get all categories formatted for dropdown lists
  *     tags: [Category Code]
@@ -120,7 +120,7 @@ router.route("/category/fordrop/").get(getallCategoryOnly);
 
 /**
  * @swagger
- * /categoryCode/{id}:
+ * /Category/{id}:
  *   get:
  *     summary: Get a specific category code by ID
  *     tags: [Category Code]
@@ -172,7 +172,7 @@ router.route("/:id").get(getCategoryCode).put(updateCategory);
 
 /**
  * @swagger
- * /categoryCode/search/{searchString}:
+ * /Category/search/{searchString}:
  *   get:
  *     summary: Search category codes by brand or category name
  *     tags: [Category Code]

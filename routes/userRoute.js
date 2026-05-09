@@ -46,7 +46,7 @@ router.use(authService.allowedTo("admin"));
 
 /**
  * @swagger
- * /users/changePassword/{id}:
+ * /User/changePassword/{id}:
  *   put:
  *     summary: Change a user's password
  *     tags: [Users]
@@ -92,7 +92,7 @@ router.put(
 
 /**
  * @swagger
- * /users:
+ * /User:
  *   get:
  *     summary: Get all users
  *     tags: [Users]
@@ -178,7 +178,7 @@ router
 
 /**
  * @swagger
- * /users/{id}:
+ * /User/{id}:
  *   get:
  *     summary: Get a specific user by ID
  *     tags: [Users]
@@ -261,7 +261,7 @@ router
 
 /**
  * @swagger
- * /users/saveFCMToken/{userId}:
+ * /User/saveFCMToken/{userId}:
  *   put:
  *     summary: Save FCM token for push notifications
  *     tags: [Users]
@@ -295,7 +295,7 @@ router.route("/saveFCMToken/:userId").put(saveFCMToken);
 
 /**
  * @swagger
- * /users/active/{id}:
+ * /User/active/{id}:
  *   put:
  *     summary: Toggle user active/inactive status
  *     tags: [Users]
@@ -318,7 +318,7 @@ router.route("/active/:id").put(makeUserUnactive);
 
 /**
  * @swagger
- * /users/search/{searchString}:
+ * /User/search/{searchString}:
  *   get:
  *     summary: Search for users by name or phone number
  *     tags: [Users]
@@ -339,7 +339,7 @@ router.route("/search/:searchString").get(searchForUser);
 
 /**
  * @swagger
- * /users/carCode/{clientType}:
+ * /User/carCode/{clientType}:
  *   get:
  *     summary: Suggest the next car code number for a client type
  *     tags: [Users]

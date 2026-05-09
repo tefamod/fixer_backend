@@ -19,7 +19,7 @@ const {
 
 /**
  * @swagger
- * /monthlyReport:
+ * /MonthlyReport:
  *   get:
  *     summary: Get all monthly reports
  *     tags: [Monthly Report]
@@ -81,7 +81,7 @@ router.route("/").get(getAllReports).post(createReport);
 
 /**
  * @swagger
- * /monthlyReport/put_bills_rent/{year_month}:
+ * /MonthlyReport/put_bills_rent/{year_month}:
  *   put:
  *     summary: Add bills and rent costs to a monthly report
  *     tags: [Monthly Report]
@@ -117,7 +117,7 @@ router.route("/put_bills_rent/:year_month").put(put_the_bills_rent);
 
 /**
  * @swagger
- * /monthlyReport/addthing:
+ * /MonthlyReport/addthing:
  *   post:
  *     summary: Add or subtract a custom item from a monthly report
  *     tags: [Monthly Report]
@@ -154,7 +154,7 @@ router.route("/addthing/").post(addorSubthing);
 
 /**
  * @swagger
- * /monthlyReport/home/work/{year_month}:
+ * /MonthlyReport/home/work/{year_month}:
  *   get:
  *     summary: Get work summary for a specific month (for home screen)
  *     tags: [Monthly Report]
@@ -191,7 +191,7 @@ router.route("/home/work/:year_month").get(getmonthWork);
 
 /**
  * @swagger
- * /monthlyReport/delete/{year_month}:
+ * /MonthlyReport/delete/{year_month}:
  *   delete:
  *     summary: Delete a monthly report
  *     tags: [Monthly Report]

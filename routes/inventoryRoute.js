@@ -19,7 +19,7 @@ const {
 
 /**
  * @swagger
- * /inventory:
+ * /Inventort:
  *   get:
  *     summary: Get all inventory components
  *     tags: [Inventory]
@@ -98,7 +98,7 @@ router.route("/").get(getAllCom).post(addComponent);
 
 /**
  * @swagger
- * /inventory/Units:
+ * /Inventort/Units:
  *   get:
  *     summary: Get all available measurement units
  *     tags: [Inventory]
@@ -124,7 +124,7 @@ router.route("/Units/").get(getAllUnits);
 
 /**
  * @swagger
- * /inventory/{id}:
+ * /Inventort/{id}:
  *   get:
  *     summary: Get a specific inventory component by ID
  *     tags: [Inventory]
@@ -178,7 +178,7 @@ router.route("/:id").get(getCom).put(UpdateComponent);
 
 /**
  * @swagger
- * /inventory/search/{searchString}:
+ * /Inventort/search/{searchString}:
  *   get:
  *     summary: Search inventory components by name
  *     tags: [Inventory]

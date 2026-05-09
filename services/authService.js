@@ -149,7 +149,7 @@ exports.loginByCarCode = asyncHandler(async (req, res, next) => {
 exports.protect = asyncHandler(async (req, res, next) => {
   //check if token exist, if exist get
   let token;
-  if (req.headers.token && req.headers.token.startsWith("Bearer")) {
+  if (req.headers.token && req.headers.token.startsWith("Bearer ")) {
     token = req.headers.token.split(" ")[1];
   }
   if (!token) {
@@ -163,7 +163,7 @@ exports.protect = asyncHandler(async (req, res, next) => {
 
   //verify token (no change happens, expired token)
   const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-
+  console.log(decoded.userId.userId);
   //check if user exists
   const currentUser = await User.findById(decoded.userId);
   if (!currentUser) {

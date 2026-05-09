@@ -12,7 +12,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /sse/verify:
+ * /SSE/verify:
  *   get:
  *     summary: Open SSE stream for email verification
  *     tags: [SSE]
@@ -40,7 +40,7 @@ router.get("/verify", sseVerify);
 
 /**
  * @swagger
- * /sse/status:
+ * /SSE/status:
  *   get:
  *     summary: Check SSE connection status for debugging
  *     tags: [SSE]

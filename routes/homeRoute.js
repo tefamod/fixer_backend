@@ -14,7 +14,7 @@ const { UpdateUserImage } = require("../middlewares/uploadImageCloud");
 
 /**
  * @swagger
- * /home/{carNumber}:
+ * /Home/{carNumber}:
  *   get:
  *     summary: Get home screen data for a specific car
  *     tags: [Home]
@@ -71,7 +71,7 @@ router.route("/:carNumber").get(getHomepram);
 
 /**
  * @swagger
- * /home/changeImage/{id}:
+ * /Home/changeImage/{id}:
  *   put:
  *     summary: Change user profile photo
  *     tags: [Home]

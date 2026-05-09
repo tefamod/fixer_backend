@@ -25,7 +25,7 @@ const {
 
 /**
  * @swagger
- * /workers:
+ * /Worker:
  *   get:
  *     summary: Get all workers
  *     tags: [Workers]
@@ -87,7 +87,7 @@ router.route("/").get(getAllWorkers).post(addWorkerValidator, addWorker);
 
 /**
  * @swagger
- * /workers/{id}:
+ * /Worker/{id}:
  *   get:
  *     summary: Get a specific worker by ID
  *     tags: [Workers]
@@ -166,7 +166,7 @@ router
 
 /**
  * @swagger
- * /workers/search/{searchString}:
+ * /Worker/search/{searchString}:
  *   get:
  *     summary: Search workers by name or phone
  *     tags: [Workers]
@@ -187,7 +187,7 @@ router.route("/search/:searchString").get(searchForWorker);
 
 /**
  * @swagger
- * /workers/withoutNID/{id}:
+ * /Worker/withoutNID/{id}:
  *   put:
  *     summary: Update worker details by ID (without NID)
  *     tags: [Workers]
@@ -222,7 +222,7 @@ router.route("/withoutNID/:id").put(UpdateWorkerDetals);
 
 /**
  * @swagger
- * /workers/{IdNumber}:
+ * /Worker/{IdNumber}:
  *   put:
  *     summary: Update worker details by National ID number
  *     tags: [Workers]
