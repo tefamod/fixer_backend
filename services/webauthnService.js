@@ -13,7 +13,15 @@ const RP_ID = process.env.WEBAUTHN_RP_ID || "localhost";
 const RP_NAME = process.env.WEBAUTHN_RP_NAME || "Fixer Admin";
 const ALLOWED_ORIGINS = process.env.WEBAUTHN_ALLOWED_ORIGINS
   ? process.env.WEBAUTHN_ALLOWED_ORIGINS.split(",")
-  : ["http://localhost:5500", "http://localhost:3000"];
+  : [
+      "http://localhost:3000",
+      "http://localhost:4000",
+      "http://localhost:4100",
+      "http://127.0.0.1:5500",
+      "http://localhost:5500",
+      "http://127.0.0.1:*",
+      "http://localhost:*",
+    ];
 
 /**
  * Generate a random challenge
@@ -33,15 +41,26 @@ const validateOrigin = (origin) => {
   console.log("Validating origin:", origin);
   console.log("Allowed origins:", ALLOWED_ORIGINS);
 
-  const isValidOrigin = ALLOWED_ORIGINS.some(
-    (allowed) => origin.startsWith(allowed) || allowed === "*",
-  );
-
+  // Allow localhost wildcard and 127.0.0.1 wildcard for development
+  const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
+  
+  const isValidOrigin = ALLOWED_ORIGINS.some((allowed) => {
+    // Exact match for production origins
+    if (!isLocalhost && allowed !== "*" && !origin.startsWith(allowed)) {
+      return false;
+    }
+    // Allow any localhost/127.0.0.1 origin in development
+    if (isLocalhost && (allowed === "http://localhost:*" || allowed === "http://127.0.0.1:*")) {
+      return true;
+    }
+    // Default check for exact match or wildcard
+    return origin.startsWith(allowed) || allowed === "*";
+  
   if (!isValidOrigin) {
     console.log("Origin validation failed for:", origin);
     throw new ApiError("Origin not allowed", 403);
   }
-
+  
   console.log("Origin validation passed for:", origin);
 };
 
