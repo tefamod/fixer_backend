@@ -292,6 +292,7 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
   // User is verified - return successful login
   const authToken = createToken({ userId: user._id });
   user.vertified = false;
+  user.save({ validateBeforeSave: false });
   const userResponse = { ...user._doc };
   delete userResponse.password;
 
