@@ -128,11 +128,3 @@ cron.schedule("*/14 * * * *", () => {
       }
     });
 });
-
-// ✅ Runs every 3 days at 2:00 AM
-//cron.schedule("0 2 */3 * *", () => {
-
-cron.schedule("*/14 * * * *", () => {
-  console.log("⏰ Cron triggered: running backup...");
-  runBackup();
-});

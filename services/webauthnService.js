@@ -21,6 +21,7 @@ const ALLOWED_ORIGINS = process.env.WEBAUTHN_ALLOWED_ORIGINS
       "http://localhost:5500",
       "http://127.0.0.1:*",
       "http://localhost:*",
+      "https://fixer-system-site-test.vercel.app",
     ];
 
 /**

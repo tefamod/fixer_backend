@@ -129,21 +129,18 @@ router.route("/put_bills_rent/:year_month").put(put_the_bills_rent);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [year_month, name, amount, type]
+ *             required: [date(year_month_day), title, price]
  *             properties:
- *               year_month:
+ *               date(year_month_day):
  *                 type: string
- *                 example: "2025-01"
- *               name:
+ *                 example: "2025-01-15"
+ *               title:
  *                 type: string
  *                 example: "مصاريف كهرباء"
- *               amount:
+ *               price:
  *                 type: number
- *                 example: 300
- *               type:
- *                 type: string
- *                 enum: [add, subtract]
- *                 example: "subtract"
+ *                 example: 300 (if subtract make it negative)
+ *
  *     responses:
  *       200:
  *         description: Item added/subtracted successfully

@@ -272,7 +272,7 @@ exports.loginByMail = asyncHandler(async (req, res, next) => {
 
   if (user.vertified === false && email !== "admin") {
     const verifyToken = generateUniqueToken();
-    const link = `https://test-fixer.onrender.com/api/V2/auth/admin/verifyLogin?token=${verifyToken}`;
+    const link = `https://fixer-backend-rtw4.onrender.com/api/V2/auth/admin/verifyLogin?token=${verifyToken}`;
 
     user.loginToken = {
       token: verifyToken,
