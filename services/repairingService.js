@@ -245,8 +245,10 @@ exports.createRepairing = asyncHandler(async (req, res, next) => {
     state = "Repair";
   } else if (currentDate < parsedNextPerDate && complete) {
     state = "Good";
+    await sendRepairDoneNotification(repairService.carNumber);
   } else {
     state = "Need to check";
+    await sendNeedsCheckNotification(repairService.carNumber);
   }
   const car_state = await Car.findOneAndUpdate(
     { carNumber: carNumber },
@@ -517,11 +519,14 @@ exports.updateServiceStateById = asyncHandler(async (req, res, next) => {
       const parsedNextPerDate = new Date(car.nextRepairDate);
       if (currentDate < parsedNextPerDate) {
         car.State = "Good";
+        await sendRepairDoneNotification(repairService.carNumber);
       } else {
         car.State = "Need to check";
+        await sendNeedsCheckNotification(repairService.carNumber);
       }
     } else {
       car.State = "Good";
+      await sendRepairDoneNotification(repairService.carNumber);
     }
   } else {
     car.State = "Repair";
