@@ -453,6 +453,12 @@ exports.setCarImg = asyncHandler(async (req, res, next) => {
       ),
     );
   }
+  const user = await User.findOne({ name: car.ownerName });
+  if (!user) {
+    return next(
+      new apiError(`Can't find user for car with id ${car._id}`, 404),
+    );
+  }
 
   let result;
 
@@ -463,7 +469,7 @@ exports.setCarImg = asyncHandler(async (req, res, next) => {
       make: brand,
       modelFamily: category,
       modelYear: model,
-      modelVariant: "sedan" || back,
+      modelVariant: back || "sedan",
       paintId: `color-${color}`,
       paintDescription: color,
       countryCode: "EGY",
@@ -540,7 +546,17 @@ exports.setCarImg = asyncHandler(async (req, res, next) => {
   car.image = result.secure_url;
   car.imagePublicId = result.public_id;
   await car.save({ validateBeforeSave: false });
+  // Find the specific car in user's car array and update it
+  const userCar = user.car.find((c) => c.id?.toString() === car._id.toString());
 
+  if (userCar) {
+    userCar.image = result.secure_url;
+    userCar.imagePublicId = result.public_id;
+  } else {
+    return next(new apiError(`Car not found in user's car list`, 404));
+  }
+
+  await user.save({ validateBeforeSave: false });
   res.status(200).json({
     publicId: result.public_id,
     url: result.secure_url,

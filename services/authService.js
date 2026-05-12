@@ -147,14 +147,15 @@ exports.loginByCarCode = asyncHandler(async (req, res, next) => {
 
 // @desc   make sure the user is logged in
 exports.protect = asyncHandler(async (req, res, next) => {
-  //check if token exist, if exist get
   let token;
+
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer ")
   ) {
     token = req.headers.authorization.split(" ")[1];
   }
+
   if (!token) {
     return next(
       new ApiError(
@@ -164,10 +165,14 @@ exports.protect = asyncHandler(async (req, res, next) => {
     );
   }
 
-  //verify token (no change happens, expired token)
   const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
   //check if user exists
-  const currentUser = await User.findById(decoded.userId.userId);
+  const userId =
+    decoded.userId && decoded.userId.userId
+      ? decoded.userId.userId
+      : decoded.userId;
+  const currentUser = await User.findById(userId);
   if (!currentUser) {
     return next(
       new ApiError(
